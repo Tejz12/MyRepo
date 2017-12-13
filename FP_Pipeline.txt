@@ -1,0 +1,1411 @@
+// To Do Next : Add code to send tgz from AutoProvision machine to AQA machine in Linux . Same for windows .
+
+/* Only keep the 2 most recent builds. */
+def time = ''
+Calendar myDate = Calendar.getInstance();
+int dow = myDate.get (Calendar.DAY_OF_WEEK);
+boolean isWeekday = ((dow >= Calendar.MONDAY) && (dow <= Calendar.FRIDAY));
+if (isWeekday) {
+	time = 240
+} else {
+	time = 20000
+}
+
+print "Time out for EFT Stage will be of $time minutes"
+
+
+def projectProperties = [
+    [$class: 'BuildDiscarderProperty',strategy: [$class: 'LogRotator', numToKeepStr: '5']],gitLabConnection('Gitlab')]
+
+properties(projectProperties)
+
+
+//def specificCause = currentBuild.rawBuild.getCause(hudson.model.Cause$UserIdCause).properties.shortDescription
+
+def loadProperties_Linux(nodeName,PropertiesFilePath,PropertiesFile) {
+    node (nodeName) {
+        dir(PropertiesFilePath) {
+            properties_linux = readProperties file: PropertiesFile
+        }
+    }
+}
+
+def loadProperties_Windows(nodeName,PropertiesFilePath,PropertiesFile) {
+    node (nodeName) {
+        dir(PropertiesFilePath) {
+            properties_windows = readProperties file: PropertiesFile
+        }
+    }
+}
+
+// Global array holding the labels on where to build and test
+def FP_VERSION = '662'
+def labels = []
+def Build_Stage = [:]
+def AutoProvision_AQA_Stage = [:]
+def Install_AQA_Stage = [:]
+def EFT_Stage = [:]
+def Deprovision_AQA_Stage = [:]
+def testlabels = [:]
+def JSystemlabels = [:]
+def HTMLLINK = [:]
+def ArchiveBuildArtifacts = false
+def ESA_CATALOG = ''
+def testenv = ''
+
+// Selecting which ESA catalog to choose to create ESA
+if (params.ESA_VERSION == '664'){
+	ESA_CATALOG = 'Automated_ESA_6.6.4'
+} else if (params.ESA_VERSION == '665'){
+	ESA_CATALOG = 'Automated_ESA_6.6.5'
+} else if (params.ESA_VERSION == '70'){
+	ESA_CATALOG = 'Automated_ESA_7.0'
+}
+
+node('AutoProvision') {
+	try {
+			HTMLLINK['BA_FP_RHEL5_x64'] = 'Not Run'
+			Build_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
+			EFT_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
+			HTMLLINK['BA_FP_RHEL6.3_x64'] = 'Not Run'   
+			Build_Stage['BA_FP_RHEL6.3_x64'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_RHEL6.3_x64'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_RHEL6.3_x64'] = 'Not Run'
+			EFT_Stage['BA_FP_RHEL6.3_x64'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_RHEL6.3_x64'] = 'Not Run'
+			HTMLLINK['BA_FP_RHEL6.8_x64'] = 'Not Run'  
+			Build_Stage['BA_FP_RHEL6.8_x64'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_RHEL6.8_x64'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_RHEL6.8_x64'] = 'Not Run'
+			EFT_Stage['BA_FP_RHEL6.8_x64'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_RHEL6.8_x64'] = 'Not Run'
+			HTMLLINK['BA_FP_RHEL7.1_x64'] = 'Not Run'	
+			Build_Stage['BA_FP_RHEL7.1_x64'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_RHEL7.1_x64'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_RHEL7.1_x64'] = 'Not Run'
+			EFT_Stage['BA_FP_RHEL7.1_x64'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_RHEL7.1_x64'] = 'Not Run'
+			HTMLLINK['BA_FP_RHEL7.2_x64'] = 'Not Run'	
+			Build_Stage['BA_FP_RHEL7.2_x64'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_RHEL7.2_x64'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_RHEL7.2_x64'] = 'Not Run'
+			EFT_Stage['BA_FP_RHEL7.2_x64'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_RHEL7.2_x64'] = 'Not Run'
+			HTMLLINK['BA_FP_RHEL7.3_x64'] = 'Not Run'		
+			Build_Stage['BA_FP_RHEL7.3_x64'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_RHEL7.3_x64'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_RHEL7.3_x64'] = 'Not Run'
+			EFT_Stage['BA_FP_RHEL7.3_x64'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_RHEL7.3_x64'] = 'Not Run'
+			HTMLLINK['BA_FP_SLES11SP1_x32_Linux-2.6-kernel'] = 'Not Run'		
+			Build_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel'] = 'Not Run'
+			EFT_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel'] = 'Not Run'
+			HTMLLINK['BA_FP_SLES11SP1_x64_Linux2.6-kernel'] = 'Not Run'		
+			Build_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel'] = 'Not Run'
+			EFT_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel'] = 'Not Run'
+			HTMLLINK['BA_FP_SLES12-SP1_x64'] = 'Not Run'		
+			Build_Stage['BA_FP_SLES12-SP1_x64'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_SLES12-SP1_x64'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_SLES12-SP1_x64'] = 'Not Run'
+			EFT_Stage['BA_FP_SLES12-SP1_x64'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_SLES12-SP1_x64'] = 'Not Run'
+			HTMLLINK['BA_FP_WIN8R2_SP1_x64'] = 'Not Run'	
+			Build_Stage['BA_FP_WIN8R2_SP1_x64'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_WIN8R2_SP1_x64'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_WIN8R2_SP1_x64'] = 'Not Run'
+			EFT_Stage['BA_FP_WIN8R2_SP1_x64'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_WIN8R2_SP1_x64'] = 'Not Run'
+			HTMLLINK['BA_FP_WIN12R2_SP1_x64'] = 'Not Run'	
+			Build_Stage['BA_FP_WIN12R2_SP1_x64'] = 'Not Run'
+			AutoProvision_AQA_Stage['BA_FP_WIN12R2_SP1_x64'] = 'Not Run'
+			Install_AQA_Stage['BA_FP_WIN12R2_SP1_x64'] = 'Not Run'
+			EFT_Stage['BA_FP_WIN12R2_SP1_x64'] = 'Not Run'
+			Deprovision_AQA_Stage['BA_FP_WIN12R2_SP1_x64'] = 'Not Run'
+			
+			if(params.'RHEL5_x64') {
+				labels.add('BA_FP_RHEL5_x64')
+				testlabels['BA_FP_RHEL5_x64'] = 'vApp_FP_RHEL5_x64' }
+			if(params.'RHEL6.3_x64') {
+				labels.add('BA_FP_RHEL6.3_x64')
+				testlabels['BA_FP_RHEL6.3_x64'] = 'vApp_FP_RHEL6.3_x64'  
+}
+			if(params.'RHEL6.8_x64') {
+				labels.add('BA_FP_RHEL6.8_x64')
+				testlabels['BA_FP_RHEL6.8_x64'] = 'vApp_FP_RHEL6.8_x64'
+				}
+			if(params.'RHEL7.1_x64') {
+				labels.add('BA_FP_RHEL7.1_x64')
+				testlabels['BA_FP_RHEL7.1_x64'] = 'vApp_FP_RHEL7.1_x64' 
+}
+			if(params.'RHEL7.2_x64') {
+				labels.add('BA_FP_RHEL7.2_x64')
+				testlabels['BA_FP_RHEL7.2_x64'] = 'vApp_FP_RHEL7.2_x64' 
+}
+			if(params.'RHEL7.3_x64') {
+				labels.add('BA_FP_RHEL7.3_x64')
+				testlabels['BA_FP_RHEL7.3_x64'] = 'vApp_FP_RHEL7.3_x64' 
+}
+			if(params.'SLES11_x32') {
+				labels.add('BA_FP_SLES11SP1_x32_Linux-2.6-kernel')
+				testlabels['BA_FP_SLES11SP1_x32_Linux-2.6-kernel'] = 'vApp_FP_SLES11_x32' 
+}
+			if(params.'SLES11_x64') {
+				labels.add('BA_FP_SLES11SP1_x64_Linux2.6-kernel')
+				testlabels['BA_FP_SLES11SP1_x64_Linux2.6-kernel'] = 'vApp_FP_SLES11_x64' 
+}
+			if(params.'SLES12_x64') {
+				labels.add('BA_FP_SLES12-SP1_x64')
+				testlabels['BA_FP_SLES12-SP1_x64'] = 'vApp_FP_SLES12_x64' 
+}
+			if(params.'WIN8R2_SP1_x64') {
+				labels.add('BA_FP_WIN8R2_SP1_x64')
+				testlabels['BA_FP_WIN8R2_SP1_x64'] = 'vApp_FP_Windows2008R2SP1_x64' 
+}
+			if(params.'WIN12R2_SP1_x64') {
+				labels.add('BA_FP_WIN12R2_SP1_x64')
+				testlabels['BA_FP_WIN12R2_SP1_x64'] = 'vApp_FP_Windows2012R2_x64' 
+}
+			
+			echo 'Build will be performed on: ' + labels.join(', ')
+			echo "Tests will be performed on: ${testlabels}"
+
+	cleanWs()
+
+		stage('Build') {
+		  cleanWs() 
+		  try {
+			def builders = [:]
+			for (x in labels) {
+				def label = x
+				builders[label] = {
+					node(label) {
+						try { 
+							echo "Build Checkout"
+							echo "Checking out FileProtector repo"
+							checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.2']], workspaceUpdater: [$class: 'UpdateUpdater']]
+							  echo "Cleaning build directory"
+							  dir('build') {
+							  deleteDir()
+							  }
+						
+							if( isUnix() ) {
+								withEnv(["label=$label","BA_WORKSPACE=$WORKSPACE"]) {
+									dir('/opt/'+label) {
+										deleteDir()
+										sh '''
+										echo "BA_WORKSPACE=$BA_WORKSPACE" > /opt/$label/BA_WORKSPACE.properties
+										cat /opt/$label/BA_WORKSPACE.properties
+										'''
+										}
+								}
+								sh 'mkdir -p build'
+							} else {
+								withEnv(["label=$label","BA_WORKSPACE=$WORKSPACE"]) {
+									dir('C:/Users/Administrator/Desktop/'+label) {
+										deleteDir()
+										bat '''
+										echo BA_WORKSPACE=%BA_WORKSPACE%>BA_WORKSPACE.properties
+										type BA_WORKSPACE.properties
+										setlocal EnableDelayedExpansion
+										dir
+										for /f "delims=" %%x in (BA_WORKSPACE.properties) do set Build=%%x
+										set var=%Build:\\=\\\\%
+										echo !var!>BA_WORKSPACE.properties
+										'''
+										}
+								}
+								if( !fileExists('build') ) {
+								bat 'mkdir build 2> NUL'
+								}	
+							}
+					
+							if ( label == 'BA_FP_WIN8R2_SP1_x64' ) {
+								dir('build') {
+									withEnv(["LD_LIBRARY_PATH=$WORKSPACE/build/lib"]) {
+										bat '''
+										echo %path%
+										call vcvarsall x86_amd64
+										set PATH=%PATH%;C:/Program Files (x86)/Microsoft Visual Studio 10.0/VC/bin;%VS110COMNTOOLS%;%WORKSPACE%/external/cppunitlite;%WORKSPACE%
+										echo %Path%
+										cmake -G "NMake Makefiles" %WORKSPACE%/ -DBUILD_2K12=OFF -DBUILD_2K3=OFF -DBUILD_2K8R2=ON -DBUILD_64BIT=ON -DBUILD_DFPSHELL_PRIVILEGE_TIMEOUT=ON -DBUILD_ENG_TEST=ON -DBUILD_FE_REDIRECT_CACHE=ON -DBUILD_FILE_PROTECTOR_LICENSE=ON -DBUILD_FP_LDAP=ON -DBUILD_FP_PAM=OFF -DBUILD_FP_TRANSFORM=ON -DBUILD_FP_VOLUME_ENC=ON -DBUILD_ITANIUM=OFF -DBUILD_MEMWATCH=OFF -DBUILD_PCC_STANDALONE=OFF -DBUILD_PROTECT_DEFAULT=ON -DBUILD_QA_UTILITIES=ON -DBUILD_TESTING=ON -DBUILD_USER_DELEGATION=ON -DBUILD_UTILITIES=OFF -DBUILD_XPSP2=OFF -DCMAKE_BACKWARDS_COMPATIBILITY=2.4 -DCMAKE_BUILD_TYPE=Release -DENABLE_KBUILD_2_0=ON --trace
+										cmake -G "NMake Makefiles" %WORKSPACE%/ -DBUILD_2K12=OFF -DBUILD_2K3=OFF -DBUILD_2K8R2=ON -DBUILD_64BIT=ON -DBUILD_DFPSHELL_PRIVILEGE_TIMEOUT=ON -DBUILD_ENG_TEST=ON -DBUILD_FE_REDIRECT_CACHE=ON -DBUILD_FILE_PROTECTOR_LICENSE=ON -DBUILD_FP_LDAP=ON -DBUILD_FP_PAM=OFF -DBUILD_FP_TRANSFORM=ON -DBUILD_FP_VOLUME_ENC=ON -DBUILD_ITANIUM=OFF -DBUILD_MEMWATCH=OFF -DBUILD_PCC_STANDALONE=OFF -DBUILD_PROTECT_DEFAULT=ON -DBUILD_QA_UTILITIES=ON -DBUILD_TESTING=ON -DBUILD_USER_DELEGATION=ON -DBUILD_UTILITIES=OFF -DBUILD_XPSP2=OFF -DCMAKE_BACKWARDS_COMPATIBILITY=2.4 -DCMAKE_BUILD_TYPE=Release -DENABLE_KBUILD_2_0=ON                        
+										nmake
+										if not errorlevel 0 (
+											exit 1
+										)
+										nmake DEPLOY
+										if not errorlevel 0 (
+											exit 1
+										)
+										'''
+									}
+								}
+							}
+					
+							if ( label == 'BA_FP_WIN12R2_SP1_x64' ) {
+								dir('build') {
+									withEnv(["LD_LIBRARY_PATH=$WORKSPACE/build/lib"]) {
+										bat '''
+										call "C:\\Program Files (x86)\\Microsoft Visual Studio 11.0\\VC\\vcvarsall.bat" x86_amd64
+										set PATH=%PATH%;C:/Program Files (x86)/Microsoft Visual Studio 11.0/VC/bin;%VS110COMNTOOLS%;%WORKSPACE%/external/cppunitlite;%WORKSPACE%
+										echo %Path%
+										cmake -G "NMake Makefiles" %WORKSPACE% -DBUILD_2K12=ON -DBUILD_2K3=OFF -DBUILD_2K8R2=OFF -DBUILD_64BIT=ON -DBUILD_DFPSHELL_PRIVILEGE_TIMEOUT=ON -DBUILD_ENG_TEST=ON -DBUILD_FE_REDIRECT_CACHE=ON -DBUILD_FILE_PROTECTOR_LICENSE=ON -DBUILD_FP_LDAP=ON -DBUILD_FP_PAM=OFF -DBUILD_FP_TRANSFORM=ON -DBUILD_FP_VOLUME_ENC=ON -DBUILD_ITANIUM=OFF -DBUILD_MEMWATCH=OFF -DBUILD_PCC_STANDALONE=OFF -DBUILD_PROTECT_DEFAULT=ON -DBUILD_QA_UTILITIES=ON -DBUILD_TESTING=ON -DBUILD_USER_DELEGATION=ON -DBUILD_UTILITIES=OFF -DBUILD_XPSP2=OFF -DCMAKE_BACKWARDS_COMPATIBILITY=2.4 -DCMAKE_BUILD_TYPE=Release -DENABLE_KBUILD_2_0=ON --trace
+										cmake -G "NMake Makefiles" %WORKSPACE% -DBUILD_2K12=ON -DBUILD_2K3=OFF -DBUILD_2K8R2=OFF -DBUILD_64BIT=ON -DBUILD_DFPSHELL_PRIVILEGE_TIMEOUT=ON -DBUILD_ENG_TEST=ON -DBUILD_FE_REDIRECT_CACHE=ON -DBUILD_FILE_PROTECTOR_LICENSE=ON -DBUILD_FP_LDAP=ON -DBUILD_FP_PAM=OFF -DBUILD_FP_TRANSFORM=ON -DBUILD_FP_VOLUME_ENC=ON -DBUILD_ITANIUM=OFF -DBUILD_MEMWATCH=OFF -DBUILD_PCC_STANDALONE=OFF -DBUILD_PROTECT_DEFAULT=ON -DBUILD_QA_UTILITIES=ON -DBUILD_TESTING=ON -DBUILD_USER_DELEGATION=ON -DBUILD_UTILITIES=OFF -DBUILD_XPSP2=OFF -DCMAKE_BACKWARDS_COMPATIBILITY=2.4 -DCMAKE_BUILD_TYPE=Release -DENABLE_KBUILD_2_0=ON
+										nmake
+										if not errorlevel 0 ( 
+											exit 1
+										)
+										nmake DEPLOY
+										if not errorlevel 0 (
+											exit 1
+										)
+										'''
+									}
+								}
+							}
+					
+							if( isUnix() ) {
+								if ( label == 'BA_FP_SLES11SP1_x32_Linux-2.6-kernel' ) {
+									withEnv(["WORKSPACE=$WORKSPACE"]) {
+										dir('build') {
+											sh '''
+											mkdir -p /root/FPInstaller
+											rm -rf /root/FPInstaller/*
+											mkdir -p /root/FPInstaller/2.6_files
+											mkdir -p /root/FPInstaller/3.x_files
+											cmake -i -G "Unix Makefiles" -DBUILD_64BIT=OFF ../
+											make
+											if [[ $? -ne 0 ]]; then
+												echo "make failed on sles_x32 2.6 kernel. Marking this build as failed"
+												exit 1
+											fi
+											make deploy
+											if [[ $? -ne 0 ]]; then
+												echo "make deploy failed on sles_x32 2.6 kernel. Marking this build as failed"
+												exit 1
+											fi
+											cd install
+											#cp *.tgz /root/FPInstaller
+											cd ../
+											cp bin/dfp_install_repack /root/FPInstaller
+											cp install/* /root/FPInstaller/2.6_files
+											'''
+										}
+										node('BA_FP_SLES11SP2_x32_Linux3.x-kernel') {
+											cleanWs()
+											echo "Checking out FileProtector repo on BA_FP_SLES11SP2_x32_Linux3.x-kernel" 
+											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.2']], workspaceUpdater: [$class: 'UpdateUpdater']]
+											echo "Cleaning build directory"
+											dir('build') {
+												sh '''    
+												cmake -i -G "Unix Makefiles" -DBUILD_64BIT=OFF ../
+												make
+												if [[ $? -ne 0 ]]; then
+													echo "make failed on sles_x32 3.x kernel. Marking this build as failed"
+													exit 1
+												fi
+												make deploy
+												if [[ $? -ne 0 ]]; then
+													echo "make deploy failed on sles_x32 3.x kernel. Marking this build as failed"
+													exit 1
+												fi
+												cd install
+												#scp *.tgz root@10.10.51.106:/root/FPInstaller
+												scp * root@10.10.51.106:/root/FPInstaller/3.x_files
+												'''				
+											}
+										}
+										dir('/root/FPInstaller') {
+										sh '''
+										./dfp_install_repack 2.6_files 3.x_files
+										rm -rf $WORKSPACE/build/install/*.tgz
+										cd install*
+										cp -rf *.tgz $WORKSPACE/build/install
+										'''
+										}
+									}
+								}
+								if ( label == 'BA_FP_SLES11SP1_x64_Linux2.6-kernel' ) {
+									withEnv(["WORKSPACE=$WORKSPACE"]) {
+										dir('build') {
+											sh '''
+											mkdir -p /root/FPInstaller
+											rm -rf /root/FPInstaller/*
+											mkdir -p /root/FPInstaller/2.6_files
+											mkdir -p /root/FPInstaller/3.x_files
+											cmake -i -G "Unix Makefiles" ../
+											make
+											if [[ $? -ne 0 ]]; then
+												echo "make failed on sles_x64 2.6 kernel. Marking this build as failed"
+												exit 1
+											fi
+											make deploy
+											if [[ $? -ne 0 ]]; then
+												echo "make deploy failed on sles_x64 2.6 kernel. Marking this build as failed"
+												exit 1
+											fi
+											cd install
+											#cp *.tgz /root/FPInstaller
+											cd ../
+											cp bin/dfp_install_repack /root/FPInstaller
+											cp install/* /root/FPInstaller/2.6_files
+											'''
+										}
+										node('BA_FP_SLES11SP2_x64_Linux3.x') {
+											cleanWs()
+											echo "Checking out FileProtector repo on BA_FP_SLES11SP2_x64_Linux3.x" 
+											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.2']], workspaceUpdater: [$class: 'UpdateUpdater']]
+											echo "Cleaning build directory"
+											dir('build') {
+												sh '''    
+												cmake -i -G "Unix Makefiles" ../
+												make
+												if [[ $? -ne 0 ]]; then
+													echo "make failed on sles_x64 3.x kernel. Marking this build as failed"
+													exit 1
+												fi
+												make deploy
+												if [[ $? -ne 0 ]]; then
+													echo "make deploy failed on sles_x64 3.x kernel. Marking this build as failed"
+													exit 1
+												fi
+												cd install
+												#scp *.tgz root@10.10.50.116:/root/FPInstaller
+												scp * root@10.10.50.116:/root/FPInstaller/3.x_files
+												'''				
+											}
+										}
+										dir('/root/FPInstaller') {
+										sh '''
+										./dfp_install_repack 2.6_files 3.x_files
+										rm -rf $WORKSPACE/build/install/*.tgz
+										cd install*
+										cp -rf *.tgz $WORKSPACE/build/install
+										'''
+										}
+									}
+								}		
+								if ( label != 'BA_FP_SLES11SP1_x32_Linux-2.6-kernel' && label != 'BA_FP_SLES11SP1_x64_Linux2.6-kernel' ) {
+									dir('build') {
+										sh '''    
+										cmake -i -G"Unix Makefiles" ../
+										make
+										if [[ $? -ne 0 ]]; then
+											echo "make failed . Marking this build as failed"
+											exit 1
+										fi
+										make deploy
+										if [[ $? -ne 0 ]]; then
+											echo "make deploy failed . Marking this build as failed"
+											exit 1
+										fi
+										'''
+									}
+								}
+							} else {
+								bat '''
+								cd build/install
+								if exist *.zip (
+									echo zip file found.Build successful ) else (
+									echo zip file not found.Build Failed . Exiting 
+									exit 1
+									)
+								'''
+							}
+							Build_Stage[label] = 'Passed'
+							println Build_Stage
+						} catch(error2) {
+							print error2
+							Build_Stage[label] = 'Failed'
+							testlabels.remove(label)
+							labels.remove(label)
+							echo "Build step failed for some/all platforms.... Tests will not be performed for $label"
+							currentBuild.result = 'FAILURE'
+							throw error2
+						}
+						println "Furthur Steps will run on :$labels"
+						println "Furthur tests will run on : $testlabels"
+					}
+				} 
+			}
+			parallel builders
+			} catch (error3) {
+				echo "Build step failed "
+			}
+		}
+
+		// This step will run on BA ... Hence labels array is used . This array contains only the name of BA's on which build step has passed .
+
+		if(params.EXECUTE_FUNCTIONAL_TESTS) {
+		if (labels) {  
+			stage('Stash Installer') {
+				try {
+					def builders = [:]
+					for (x in labels) {
+						def label = x
+						builders[label] = {
+							node(label) {
+								try {
+									if( isUnix() ) {
+										loadProperties_Linux(label,"/opt/$label","BA_WORKSPACE.properties")
+										dir(properties_linux.BA_WORKSPACE+'/build/install') {
+											stash includes: 'FileProtector*.tgz', name: label
+										}
+									} else {
+										loadProperties_Windows(label,"C:/Users/Administrator/Desktop/$label","BA_WORKSPACE.properties")
+											dir(properties_windows.BA_WORKSPACE+'\\build\\install') {
+												bat '''
+												rm -rf *ALL.zip
+												'''
+												//stash includes: 'FileProtector_*_ALL.zip', name: label
+												stash includes: 'FileProtector_*.zip', name: label
+										}
+									}
+								} catch(error1) {
+									print error
+									print "Stashing failed"
+									throw error1
+								}
+							}
+						}
+					}
+					parallel builders
+				} catch(error2) {
+					print error2
+					testlabels.remove(label)
+					labels.remove(label)
+					println "Copying installer failed"
+					currentBuild.result = 'UNSTABLE'
+					}
+			}
+		} else {
+			print "No labels found for Stash Installer step. Build Step must have failed on all platforms"
+		}	
+
+		if (labels) {
+		stage('AutoProvisioning AQA') {
+			try {
+			print "labels available : $labels"
+			print "testlables available : $testlabels"
+			def builders = [:]
+			for (x in labels) {
+				def label = x
+				builders[label] = {
+					node(label) {
+						if ( isUnix() ) {
+							dir('DevOps') {
+							deleteDir()
+								echo "Checking out DevOps repo"
+								checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud']], workspaceUpdater: [$class: 'UpdateUpdater']]
+								echo "Creating AQA machines for $labels"
+								try {
+									def AQA_VAPP_NAME = label.substring(6) //This will modify BA_FP_RHEL6_x64 to RHEL6_x64
+									withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+									withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","FP_VERSION=$FP_VERSION"]) {
+									sh '''
+									./Create-Stop-JSystem-Machine.sh FP-$FP_VERSION-$BUILD_NUMBER CREATE $JENKINS_USERNAME $JENKINS_PASSWORD 1 $AQA_VAPP_NAME
+									cd $WORKSPACE/DevOps/vApp_Files
+									cat vClusterConfig_AQA-"$AQA_VAPP_NAME"-FP-"$FP_VERSION"-"$BUILD_NUMBER"
+									IP_ADDRESS=`cat vClusterConfig_AQA-"$AQA_VAPP_NAME"-FP-"$FP_VERSION"-"$BUILD_NUMBER" | grep IP_ADDRESS | awk -F"=" '{print $2}'`
+									ping -c 5 "$IP_ADDRESS"
+									if [[ $? -ne 0 ]]; then
+										echo "$IP_ADDRESS of $AQA_VAPP_NAME is not pingable ....Exiting"
+										exit 1
+									fi
+									vm_name=`echo AQA-"$AQA_VAPP_NAME"-FP-"$FP_VERSION"-"$BUILD_NUMBER"`
+									echo "vm_name=$vm_name" > $WORKSPACE/variables.properties
+									'''
+									loadProperties_Linux(label,"$WORKSPACE","variables.properties")
+									echo properties_linux.vm_name
+									JSystemlabels["$label"] = properties_linux.vm_name
+									}
+									}
+									AutoProvision_AQA_Stage[label] = 'Passed'
+									println AutoProvision_AQA_Stage
+								} catch(error1) {
+									print "Creation of JSystem machine failed for $label"
+									AutoProvision_AQA_Stage[label] = 'Failed'
+									labels.remove(label)
+									testlabels.remove(label)
+									//JSystemlabels.remove(label)
+									throw error1
+								}	
+							}
+						} else {
+							echo "BA is windows machine .. Hence AutoProvisioning of Windows-AQA machines will be done from AutoProvision machine"
+							node('AutoProvision') {
+								cleanWs()
+								dir(label) {
+									// We save this workspace path , used in deletion of vApp 
+									withEnv(["label=$label"]){
+										sh '''
+										Windows_createVapp_workspace_Path=`pwd`
+										echo "$Windows_createVapp_workspace_Path" > /opt/${label}_path.properties
+										'''
+									}
+									deleteDir()
+									echo "Checking out DevOps repo"
+									checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud']], workspaceUpdater: [$class: 'UpdateUpdater']]
+									try {
+										def AQA_VAPP_NAME = label.substring(6) //This will modify BA_FP_RHEL6_x64 to RHEL6
+										withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+											withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","label=$label","FP_VERSION=$FP_VERSION"]) {
+												sh '''
+												randNum=`echo $RANDOM % 200 + 1 | bc`
+												sleep $randNum
+												./Create-Stop-JSystem-Machine.sh FP-$FP_VERSION-$BUILD_NUMBER CREATE $JENKINS_USERNAME $JENKINS_PASSWORD 1 $AQA_VAPP_NAME
+												cd $WORKSPACE/$label/vApp_Files
+												cat vClusterConfig_AQA-"$AQA_VAPP_NAME"-FP-"$FP_VERSION"-"$BUILD_NUMBER"
+												IP_ADDRESS=`cat vClusterConfig_AQA-"$AQA_VAPP_NAME"-FP-"$FP_VERSION"-"$BUILD_NUMBER" | grep IP_ADDRESS | awk -F"=" '{print $2}'`
+												ping -c 5 "$IP_ADDRESS"
+												if [[ $? -ne 0 ]]; then
+													echo "$IP_ADDRESS of $AQA_VAPP_NAME is not pingable ....Exiting"
+													exit 1
+												fi
+												sshpass -p "protegrity" ssh -o StrictHostKeyChecking=no Administrator@$IP_ADDRESS "cmd /c  shutdown /f /r"												
+												sleep 240
+												count=1
+												success=0
+												while [ $count -lt 15 ]
+												do
+												echo "Trying to ping $AQA_VAPP_NAME Attempt $count"
+												if [ $count -gt 2 ]; then
+												sleep 25
+												fi
+												count=`expr $count + 1`
+												ping -c 4 $IP_ADDRESS
+												if [ $? == 0 ]; then
+												success=1
+												break
+												fi
+												done
+												
+												sleep 60
+												
+												# // Now we create a file secret.groovy with the help of which we retrieve the secret key of the slave so the we can connect it as slave in jenkins
+												echo "for (aSlave in hudson.model.Hudson.instance.slaves)" > secret_key.groovy
+												echo "{ println aSlave.name + \\",\\" + aSlave.getComputer().getJnlpMac() }" >> secret_key.groovy
+												curl --user "$JENKINS_USERNAME:$JENKINS_PASSWORD"  http://dashboard.protegrity.com/scriptText  --data-urlencode "script=$(<./secret_key.groovy)" > slave_list.txt
+												cd $WORKSPACE
+												vm_name=`echo AQA-"$AQA_VAPP_NAME"-FP-"$FP_VERSION"-"$BUILD_NUMBER"`
+												echo "vm_name=$vm_name" > $WORKSPACE/variables.properties
+												secret_key=`cat $WORKSPACE/$label/vApp_Files/slave_list.txt | grep $vm_name | awk -F"," '{print $2}'`
+												echo "The secret Key is : $secret_key"
+												# // Now we prepare a file slave.bat which will include the command for connecting the agent as slave in jenkins . We send this file on that agent
+												echo "@echo off" > slave.bat
+												echo "set secret_key=$secret_key" >> slave.bat
+												echo "set vm_name=$vm_name" >> slave.bat
+												echo "java -jar C:/jenkins/slave.jar -jnlpUrl http://dashboard.protegrity.com:8081/computer/%vm_name%/slave-agent.jnlp -secret %secret_key%" >> slave.bat
+												sshpass -p "protegrity" scp -o StrictHostKeyChecking=no slave.bat Administrator@$IP_ADDRESS:c:/users/Administrator/Desktop
+												# // Now we create a script task_scheduler.bat which will call the slave.bat script and have the agent connected in jenkins
+												#echo 'SchTasks /Create /SC HOURLY /NP /TN "dashboard slave" /TR "c:/users/Administrator/Desktop/slave.bat" /f' > task_scheduler.bat
+												echo 'schtasks /create /xml "C:\\Users\\Administrator\\Desktop\\dashboard_slave.xml" /tn "dashboard_slave" /ru Administrator /rp protegrity /f' > task_scheduler.bat
+												echo 'SchTasks /RUN /TN "dashboard_slave"' >> task_scheduler.bat
+												sshpass -p "protegrity" scp -o StrictHostKeyChecking=no task_scheduler.bat Administrator@$IP_ADDRESS:c:/users/Administrator/Desktop
+												sshpass -p "protegrity" ssh -o StrictHostKeyChecking=no -v Administrator@$IP_ADDRESS 'c:/users/Administrator/Desktop/task_scheduler.bat'
+												# // Now we check if slave got successfully connected in jenkins or not
+												if [[ `curl --silent --user $JENKINS_USERNAME:$JENKINS_PASSWORD http://dashboard.protegrity.com:8081/computer/$vm_name/api/json?pretty=true | grep "Not Found"` ]]; then
+													echo -e "\n>>>>>>>>> Slave not created in jenkins"
+													exit 1
+												else
+													echo "slave created successfully in jenkins"
+												fi
+												'''
+												loadProperties_Windows("AutoProvision","$WORKSPACE","variables.properties")
+												echo properties_windows.vm_name
+												JSystemlabels["$label"] = properties_windows.vm_name
+											}
+										}
+										AutoProvision_AQA_Stage[label] = 'Passed'
+										println AutoProvision_AQA_Stage
+									} catch(error2) {
+										print error2
+										AutoProvision_AQA_Stage[label] = 'Failed'
+										labels.remove(label)
+										testlabels.remove(label)
+										//JSystemlabels.remove(label)
+										throw error2
+										println AutoProvision_AQA_Stage
+									}
+								}
+							}
+					}
+					}
+				}
+			}
+			parallel builders
+			} catch(error3) {
+				print "labels(BA's) available after AQA-AutoProvision Step : $labels"
+				print "testlabels available after AQA-AutoProvision Step : $testlabels"
+				print "JSystemlabels available after AQA-AutoProvision Step : $JSystemlabels"
+				print error3
+				currentBuild.result = 'UNSTABLE'
+			}
+				
+		}
+		} else {
+			print "No labels found for Autoprovision AQA stage. Stash installer must have failed for all platforms"
+		}
+
+		if (labels) {
+		stage('Install AQA') {
+			// This block will run on the AQA slaves that were created in above steps
+			try {
+				def builders = [:]
+				for (x in labels) {
+					def label = x
+					if (JSystemlabels[label]) {
+						def aqanode = JSystemlabels[label]
+						builders[aqanode] = {
+							node(aqanode) {
+								try {
+									if ( isUnix() ) {
+										// Code to install AQA on Linux nodes 
+										print "Checking out AQA trunk"
+										checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk']], workspaceUpdater: [$class: 'UpdateUpdater']]
+										withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+    										sh '''
+    										echo yes | svn up --username $JENKINS_USERNAME --password $JENKINS_PASSWORD
+										    '''
+										}
+										withEnv(["aqanodename=$aqanode"]) {	
+											sh '''
+									
+												/opt/apache-maven-3.0.4/bin/mvn install
+												cd runnerQA/target
+												rm -rf /home/jenkins/AQA_SVN
+												mkdir -p /home/jenkins/AQA_SVN
+												cp AQA*.jar /home/jenkins/AQA_SVN
+												cd /home/jenkins/AQA_SVN
+												jar xf AQA*.jar
+												cd runner
+												mkdir -p log/current
+												rm -rf pom.xml
+												cp $WORKSPACE/runnerQA/src/main/resources/runner/pom.xml .
+												chmod -R 777 *
+												cd target
+												./extract-tests.sh
+												cd classes/sut
+												rm -rf sut_master.xml
+												cd /home/jenkins/AQA_SVN/runner
+												sed "/tests.dir=/ s/=.*/=\\/home\\/jenkins\\/AQA_SVN\\/runner\\/target\\/classes/" jsystem.properties > jsystem.properties.tmp && mv jsystem.properties.tmp jsystem.properties        
+												sed "/tests.src=/ s/=.*/=\\/home\\/jenkins\\/AQA_SVN\\/runner\\/src\\/main\\/java/" jsystem.properties > jsystem.properties.tmp && mv jsystem.properties.tmp jsystem.properties
+												#dos2unix jsystem.properties
+												
+												'''
+													//build job: 'Install_AQA_From_FTP', parameters: [[$class: 'NodeParameterValue', name: 'TARGET_AGENT_NAME', value: aqanode]]
+										}
+										// The following line places the FP installer in logged in user's home dir in latest folder
+										dir('/root/latest') {
+											deleteDir()
+											unstash label
+										}
+									} else {
+										//Code to install AQA on Windows nodes
+										cleanWs()
+										print "Checking out AQA trunk"
+										checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk']], workspaceUpdater: [$class: 'UpdateUpdater']]
+										bat '''
+										java -version
+										C:\\Users\\jenkins\\apache-maven-3.0.4\\bin\\mvn install
+										'''
+										powershell '''
+										New-Item -ItemType Directory -Force -Path C:\\Users\\jenkins\\AQA_SVN
+										Remove-Item C:\\Users\\jenkins\\AQA_SVN\\* -Recurse -Force	
+										cd runnerQA\\target\\
+										copy AQA*.jar C:\\Users\\jenkins\\AQA_SVN
+										cd C:\\Users\\jenkins\\AQA_SVN\\
+										& jar xvf AQA*.jar
+										if($?)
+											{
+											"##################### AQA extraction succeeded ###########################"
+											}
+										else
+											{
+											"###################### AQA extraction failed #########################"
+											exit 1
+											}
+										echo "########################## Extracting the tests ##########################"
+										cd C:\\Users\\jenkins\\AQA_SVN\\runner
+										mkdir log
+										del pom.xml
+										copy $env:WORKSPACE\\runnerQA\\src\\main\\resources\\runner\\pom.xml .
+										'''
+										bat '''
+										cd C:\\Users\\jenkins\\AQA_SVN\\runner\\target\
+										& extract-tests-register-dll.bat
+										'''
+										powershell '''
+										if (Test-Path C:\\Users\\jenkins\\AQA_SVN\\runner\\target\\classes\\sut) {
+											"---------sut folder exists.....Test extraction successful....Proceeding to next step------------"
+										}
+										else {
+										"---------sut folder does not exist .... Test extraction failed ...Exiting------------------"
+										exit 1
+										}
+										pwd
+										'''
+										// The following line places the FP installer in logged in user's home dir in latest folder
+										dir('C:/Users/Administrator/latest') {
+											deleteDir()
+											unstash label
+										}
+									}
+									Install_AQA_Stage[label] = 'Passed'
+									println Install_AQA_Stage
+								} catch(error100) {
+										print "Installing AQA failed"
+										Install_AQA_Stage[label] = 'Failed'
+										JSystemlabels.remove(label)
+										labels.remove(label)
+										testlabels.remove(label)
+										throw error100
+										println Install_AQA_Stage
+									}
+									print "AQA labels available are $JSystemlabels"
+							}
+						}
+					}
+				}
+				parallel builders
+			} catch(error) {
+				print error
+				print "Install AQA Stage failed"
+				currentBuild.result = 'UNSTABLE'
+			}
+		} // stage('Install AQA')
+		} else {
+			print "No labels found for Install AQA stage. AutoProvision stage must have failed for all platforms"
+		}
+
+		if (labels) {	
+			stage('Pre Protector AutoProvision Setup') {
+				try {
+					def builders = [:]
+					for (x in labels) {
+						def label = x
+						if (JSystemlabels[label]) {
+							def aqanode = JSystemlabels[label]
+							builders[aqanode] = {
+								node(aqanode) {
+									try {
+										withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+											withEnv(["ESA_CATALOG=$ESA_CATALOG","testenv=${testlabels[label]}","FUNCTIONAL_TEST_SCENARIOS=${params.FUNCTIONAL_TEST_SCENARIOS}","INSTALLATION_SCENARIO=${params.INSTALLATION_SCENARIO}"]) {
+												if ( isUnix() ) {
+													print "Creating ESA and Test machines for Linux machines"
+													dir('/home/jenkins/AQA_SVN/runner') {
+													sh '''
+													echo "esaVappTemplate=$ESA_CATALOG">>summary.properties
+													echo "protectorVappTemplate=$testenv">>summary.properties
+													echo "#################### summary.properties file #######################"
+													cat summary.properties
+													cd target/classes/sut
+													rm -rf sut_master.xml
+													cp sut_master_ci.xml sut_master.xml
+													sed -i "s/{AQA_USERNAME}/$JENKINS_USERNAME/g" sut_master.xml
+													sed -i "s/{AQA_PASSWORD}/$JENKINS_PASSWORD/g" sut_master.xml
+													echo "###################### sut_master.xml file #########################"
+													cat sut_master.xml
+													'''
+													}
+												} else {
+													print "Creating ESA and Test machines for Windows machines"
+													dir('C:\\Users\\jenkins\\AQA_SVN\\runner'){
+													bat '''
+													echo . && echo esaVappTemplate=%ESA_CATALOG%>>summary.properties
+													echo protectorVappTemplate=%testenv%>>summary.properties
+													echo "#################### summary.properties ###############################"
+													type summary.properties
+													'''
+													powershell '''
+													(Get-Content -Path C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml) -replace [Regex]::Escape('{AQA_USERNAME}'),[Regex]::Escape($env:JENKINS_USERNAME) | Set-Content C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml
+													(Get-Content -Path C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml) -replace [Regex]::Escape('{AQA_PASSWORD}'),[Regex]::Escape($env:JENKINS_PASSWORD) | Set-Content C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml        
+													copy C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master.xml
+													Get-Content C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master.xml
+													'''
+													}
+												}
+											} //withEnv
+										} //withCredentials
+									} catch (error) {
+										print error
+										JSystemlabels.remove(label)
+										labels.remove(label)
+										testlabels.remove(label)
+										throw error
+									}
+								}
+							}
+						}
+					}
+					parallel builders
+				} catch (error200) {
+					print error200
+					print "AutoProvision ESA and Test Machines failed"
+					currentBuild.result = 'UNSTABLE'
+				}
+			}
+		}
+
+		if (labels) {
+			timeout(time) {
+				stage('Execute Functional Tests') {
+					try {
+						def builders = [:]
+						for (x in labels) {
+							def label = x
+							if (JSystemlabels[label]) {
+								def aqanode = JSystemlabels[label]
+								builders[aqanode] = {
+									node(aqanode) {
+										try {
+											withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+												withEnv(["ESA_CATALOG=$ESA_CATALOG","testenv=${testlabels[label]}","FUNCTIONAL_TEST_SCENARIOS=${params.FUNCTIONAL_TEST_SCENARIOS}","INSTALLATION_SCENARIO=${params.INSTALLATION_SCENARIO}","label=$label","Automatic_Nightly_Weekend_Scenarios=${params.'Automatic_Nightly_Weekend_Scenarios'}","UNINSTALLATION_SCENARIO=$UNINSTALLATION_SCENARIO"]) {
+													if ( isUnix() ) {
+														dir('/home/jenkins/AQA_SVN/runner') {
+															sh '''
+															if [[ $Automatic_Nightly_Weekend_Scenarios == "true" ]]; then
+																echo "Scenarios will be as executed follows :\n1) Mon-Thu : /scenarios/6.6.2/FileProtector/Smoke_Suite,/scenarios/6.6.2/FileProtector/FileEncryption_RCWD\n2)Friday : All scenarios"
+																DAY=`date +%A`
+																if [[ "$DAY" == "Friday" ]]; then
+																	echo "Its Friday ! All scenarios will be run today"
+																	FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/Command_Delegation,/scenarios/6.6.2/FileProtector/Smoke_Suite,/scenarios/6.6.2/FileProtector/AC_FullCertification,/scenarios/6.6.2/FileProtector/SystemCall_Testcase,/scenarios/6.6.2/FileProtector/FE_FullCertification
+																	echo "Scenarios executed will be $FUNCTIONAL_TEST_SCENARIOS"
+																else
+																	echo "Its not friday , only smoke_suit and RCWD tests will be run"
+																	FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/Smoke_Suite,/scenarios/6.6.2/FileProtector/FileEncryption_RCWD
+																	echo "Scenarios executed will be $FUNCTIONAL_TEST_SCENARIOS"
+																fi
+															fi
+															export DISPLAY=:0.0
+															#export XAUTHORITY=~/.Xauthority
+															#xhost +
+															execCommand_ScenarioList="-Dscenario="
+															execCommand_SutList="-Dsut="
+															#execCommand_ScenarioList=$execCommand_ScenarioList"scenarios/UpdateSummaryProperties"
+															#execCommand_SutList=$execCommand_SutList"default.xml"
+															execCommand_ScenarioList=$execCommand_ScenarioList"$INSTALLATION_SCENARIO"
+															execCommand_SutList=$execCommand_SutList"default.xml"
+															for currentScenario in ${FUNCTIONAL_TEST_SCENARIOS//,/ }; do
+																execCommand_ScenarioList=$execCommand_ScenarioList",$currentScenario"
+																execCommand_SutList=$execCommand_SutList",default.xml"
+															done
+															execCommand_ScenarioList=$execCommand_ScenarioList,$UNINSTALLATION_SCENARIO
+															execCommand_SutList=$execCommand_SutList,default.xml
+															/opt/apache-maven-3.0.4/bin/mvn -e jsystem:run $execCommand_ScenarioList $execCommand_SutList
+															#/opt/apache-maven-3.0.4/bin/mvn -e jsystem:run -Dscenario=$UNINSTALLATION_SCENARIO -Dsut=default.xml
+															'''
+															print "Stashing the log folder"
+															dir('log') {
+																stash includes: 'current/**/*', name: 'Logs_'+label
+															}
+														}
+													} else {
+														print "Creating ESA and Test machines for Windows machines"
+														dir('C:\\Users\\jenkins\\AQA_SVN\\runner'){
+															bat '''
+															@echo off
+															setlocal EnableDelayedExpansion
+															IF %Automatic_Nightly_Weekend_Scenarios% == true (
+																REM setlocal EnableDelayedExpansion
+																set day=%DATE:~0,3%
+																if !day! == Fri (
+																	echo "Its friday .... Executing all scenarios"
+																	set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/AC_FullCertification,/scenarios/6.6.2/FileProtector/FE_FullCertification
+																) else (
+																	echo "Its a weekday . Executing only RCWD scenario"
+																	set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/FileEncryption_RCWD
+																)
+																echo "Scenarios executed will be : !FUNCTIONAL_TEST_SCENARIOS!"
+															)
+															REM setlocal DisableDelayedExpansion
+															set execCommand_ScenarioList=-Dscenario=
+															set execCommand_SutList=-Dsut=
+															REM set execCommand_ScenarioList=%execCommand_ScenarioList%scenarios/UpdateSummaryProperties
+															REM set execCommand_SutList=%execCommand_SutList%default.xml
+
+															REM Remove the below comments once remote install is done for fp windows.
+
+															set execCommand_ScenarioList=%execCommand_ScenarioList%%INSTALLATION_SCENARIO%
+															set execCommand_SutList=%execCommand_SutList%default.xml
+
+															set "execCommand_ScenarioList=%execCommand_ScenarioList%,%FUNCTIONAL_TEST_SCENARIOS%,%UNINSTALLATION_SCENARIO%"
+
+															REM SETLOCAL EnableDelayedExpansion
+															For %%j in (%FUNCTIONAL_TEST_SCENARIOS%) Do Set /A count+=1
+															echo Total count: %count%
+
+															FOR /L %%i IN (1,1,%count%) DO (
+															echo %%i
+															echo "Before %execCommand_SutList%"
+															set "execCommand_SutList=!execCommand_SutList!,default.xml"
+															echo "After !execCommand_SutList!"
+															)
+															
+															set "execCommand_SutList=%execCommand_SutList%,default.xml"
+															
+															echo "################### Scenario List ######################"
+															echo %execCommand_ScenarioList%
+
+															echo "######################### Sut List ############################"
+															echo !execCommand_SutList!
+
+															cd C:\\Users\\jenkins\\AQA_SVN\\runner
+															C:\\Users\\jenkins\\apache-maven-3.0.4\\bin\\mvn -e jsystem:run %execCommand_ScenarioList% %execCommand_SutList%
+															C:\\Users\\jenkins\\apache-maven-3.0.4\\bin\\mvn -e jsystem:run -Dscenario=$UNINSTALLATION_SCENARIO -Dsut=default.xml
+															'''
+															print "Stashing the log folder"
+														}
+															dir('C:\\Users\\jenkins\\AQA_SVN\\runner\\log') {
+																stash includes: 'current\\**\\*', name: 'Logs_'+label
+															}
+													}	
+												} //withEnv
+											} //withCredentials
+											EFT_Stage[label] = 'Passed'
+											println EFT_Stage
+										} catch (error) {
+											print error
+											EFT_Stage[label] = 'Failed'
+											JSystemlabels.remove(label)
+											labels.remove(label)
+											testlabels.remove(label)
+											throw error
+											println EFT_Stage
+										}
+									}
+								}
+							}
+						}
+						parallel builders
+					} catch (error200) {
+						print error200
+						print "AutoProvision ESA and Test Machines failed"
+						currentBuild.result = 'UNSTABLE'
+					}
+				}
+			}
+		}
+
+		if (labels) {
+			// This stage will unstash the functional tests log and publish the reports
+			stage('Publish HTML Reports') {
+				try {
+					def builders = [:]
+					for (x in labels) {
+						def label = x
+						builders[label] = {
+							node('AutoProvision') {
+								withEnv(["label=$label","WORKSPACE=$WORKSPACE"]) {
+									try {
+										dir(WORKSPACE+'/'+label+'/'+'log') {
+											unstash 'Logs_'+label
+										}
+										publishHTML([allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true, reportDir: label+'/'+'log'+'/'+'current', reportFiles: 'index.html', reportName: 'HTML Report for '+ label, reportTitles: 'Functional_Tests_Report'])
+										junit allowEmptyResults: true, testResults: label+'/'+'log'+'/'+'current'+'/'+'TEST-JSystem_JUnit_report.xml'
+									} catch(error400) {
+										print "Unstashing of logs failed"
+										print error400
+										throw error400
+									}
+								}
+							}
+						}
+					}
+					parallel builders
+				} catch(error500) {
+					print error500
+					currentBuild.result = 'UNSTABLE'
+				}
+			}
+		}
+
+		if (labels) {
+			stage('Powering Off AQA machines') {
+				try {
+					print "labels available to delete : $labels"
+					def builders = [:]
+					for (x in labels) {
+						def label = x
+						builders[label] = {
+							node(label) {
+								if ( isUnix() ) {
+									dir('DevOps') {
+										print "Powering off AQA machines for $label"
+										try {
+											def AQA_VAPP_NAME = label.substring(6) //This will modify BA_FP_RHEL6_x64 to RHEL6_x64
+											withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+												withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","WORKSPACE=$WORKSPACE","FP_VERSION=$FP_VERSION"]) {
+													sh '''
+													echo $WORKSPACE
+													./Create-Stop-JSystem-Machine.sh FP-$FP_VERSION-$BUILD_NUMBER STOP $JENKINS_USERNAME $JENKINS_PASSWORD 1 $AQA_VAPP_NAME
+													if [[ $? -eq 0 ]]; then
+														echo "AQA machine power off done successfully"
+													else
+													echo "AQA machine power off failed . Exiting"
+													exit 1
+													fi
+													'''
+												}
+											}
+											Deprovision_AQA_Stage[label] = 'Passed'
+											println Deprovision_AQA_Stage
+										} catch(error200) {
+											print error200
+											Deprovision_AQA_Stage[label] = 'Failed'
+											JSystemlabels.remove(label)
+											labels.remove(label)
+											testlabels.remove(label)
+										}
+									}
+								} else {
+									node('AutoProvision') {
+										try {
+											def AQA_VAPP_NAME = label.substring(6) //This will modify BA_FP_RHEL6_x64 to RHEL6
+											withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+												withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","label=$label","label=$label","FP_VERSION=$FP_VERSION"]) {
+													sh '''
+													Windows_createVapp_workspace_Path=`cat /opt/${label}_path.properties`
+													echo "Stopping vApp will run in path : $Windows_createVapp_workspace_Path"
+													cd $Windows_createVapp_workspace_Path
+													./Create-Stop-JSystem-Machine.sh FP-$FP_VERSION-$BUILD_NUMBER STOP $JENKINS_USERNAME $JENKINS_PASSWORD 1 $AQA_VAPP_NAME
+													if [[ $? -eq 0 ]]; then
+														echo "AQA machine powered off successfully for $label"
+													else
+														echo "AQA machine power off failed for $label . Exiting"
+														exit 1
+													fi
+													'''
+												}
+											}
+											Deprovision_AQA_Stage[label] = 'Passed'
+										} catch(error10000) {
+											print error10000
+											Deprovision_AQA_Stage[label] = 'Failed'
+												JSystemlabels.remove(label)
+												labels.remove(label)
+												testlabels.remove(label)
+												throw error10000
+										}
+									}
+								}
+							}
+						}
+					}
+					parallel builders
+				} catch(error300) {
+					print error300
+					print "Stopping vApps failed"
+					currentBuild.result = 'UNSTABLE'
+				}
+			}
+		}
+
+		} else {
+			print "Skipping execution of Functional Tests"
+		} 	// if(params.EXECUTE_FUNCTIONAL_TESTS
+
+	} catch(errorFinal) {
+		print "Total build failed"
+		print errorFinal
+		currentBuild.result = 'Failed'
+	} finally {
+	
+		// Mail script
+		stage('Email') {
+			def label = ''
+			for (x in labels) {
+				label = x 
+				withEnv(["label=$label","BUILD_URL=$BUILD_URL"]) {	
+					try {
+						sh '''
+						url="${BUILD_URL}HTML_Report_for_${label}"
+						curl --output /dev/null --silent --head --fail "$url";
+						'''
+						HTMLLINK[label] = '$BUILD_URL/HTML_Report_for_'+label
+					} catch(error) {
+						print error
+						HTMLLINK[label] = 'N.A'
+					}
+				}
+			}
+					def subject = ''
+					if ( currentBuild.result == null ) {
+						subject = "FileProtector-${FP_VERSION}  Report : SUCCESS "
+						currentBuild.result = 'SUCCESS'
+					} else {
+						subject = "FileProtector-${FP_VERSION}  Report :" + currentBuild.result
+					}		
+				
+					def failedDetails = """				
+									<STYLE>
+									BODY, TABLE, TD, TH, P {
+										font-family:Verdana,Helvetica,sans serif;
+										font-size:11px;
+										color:black;
+										}
+										h1 { color:black; }
+										h2 { color:black; }
+										h3 { color:black; }
+										TD.bg1 { color:white; background-color:#595959; font-size:120% }
+										TD.bg2 { color:white; background-color:#4040FF; font-size:110% }
+										TD.bg3 { color:white; background-color:#8080FF; }
+										TD.test_passed { color:#ccc; }
+										TD.test_failed { color:red; }
+										TD.console { font-family:Courier New, Lucida Console; }
+									</STYLE>
+									<BODY>
+									<TABLE>
+										<TR>
+											<TD align="centre">
+											<IMG SRC="http://dashboard.protegrity.com/static/eb749496/images/headshot.png"/>
+											</TD>
+											<TD valign="left"><B style="font-size: 200%;">Jenkins Build Results</B></TD>
+										</TR>
+										<TR>
+											<TD>Build Url</TD>
+											<TD>: <A href="${BUILD_URL}">${JOB_NAME}</A></TD>
+										</TR>
+										<TR>
+											<TD>Product</TD>
+											<TD>: FileProtector</TD>
+										</TR>
+										<TR>
+											<TD><b>FP Version</b></TD>
+											<TD>: <b>$FP_VERSION</b></TD>
+										</TR>
+										<TR>
+										   <TD>Build Number</TD>
+										   <TD>: ${BUILD_NUMBER}</TD>
+										</TR>
+									</TABLE>    
+									<TABLE>
+										<TR bgcolor="lightblue">
+											<td width="10%"><b>RHEL63 (Kernel : 2.6.32-696.1.1.el6.x86_64)</b></td>
+										</TR>
+										<TR>
+										<td>Build : ${Build_Stage['BA_FP_RHEL6.3_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL6.3_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL6.3_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL6.3_x64']} <br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL6.3_x64']}<br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL6.3_x64']}</td>
+										</TR>
+    						         	        <TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>RHEL68 (Kernel : 2.6.32-642.15.1.el6.x86_64)</b></td>
+                                            </TR>
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_RHEL6.8_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL6.8_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL6.8_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL6.8_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL6.8_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL6.8_x64']}</td>
+                                            </TR>
+											
+						         	        <TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>RHEL71 (Kernel : 3.10.0-229.1.2.el7.x86_64)</b></td>
+                                            </TR>
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_RHEL7.1_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL7.1_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL7.1_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL7.1_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL7.1_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL7.1_x64']}</td>
+                                            </TR>
+										
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>RHEL72 (Kernel : 3.10.0-327.el7.x86_64)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_RHEL7.2_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL7.2_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL7.2_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL7.2_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL7.2_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL7.2_x64']}</td>
+                                            </TR>
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>RHEL73 (Kernel : 3.10.0-514.el7.x86_64)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_RHEL7.3_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL7.3_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL7.3_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL7.3_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL7.3_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL7.3_x64']} </td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>SLES11_x32 (Kernel : 2.6.32.12-0.7-pae , 3.0.13-0.27-pae)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']}</td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>SLES11_x64 (Kernel : 2.6.32.12-0.7-default , 3.0.13-0.27-default)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_SLES11SP1_x64_Linux2.6-kernel']}</td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>SLES12_x64 (Kernel : 3.12.49-11-default)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_SLES12-SP1_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_SLES12-SP1_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_SLES12-SP1_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_SLES12-SP1_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_SLES12-SP1_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_SLES12-SP1_x64']}</td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>WIN8</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_WIN8R2_SP1_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_WIN8R2_SP1_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_WIN8R2_SP1_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_WIN8R2_SP1_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_WIN8R2_SP1_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_WIN8R2_SP1_x64']} </td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>WIN12</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_WIN12R2_SP1_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_WIN12R2_SP1_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_WIN12R2_SP1_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_WIN12R2_SP1_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_WIN12R2_SP1_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_WIN12R2_SP1_x64']} </td>
+                                            </TR>
+											
+								</TABLE><br><br>
+					
+					"""
+									
+					def passedDetails = """
+									<STYLE>
+									BODY, TABLE, TD, TH, P {
+										font-family:Verdana,Helvetica,sans serif;
+										font-size:11px;
+										color:black;
+										}
+										h1 { color:black; }
+										h2 { color:black; }
+										h3 { color:black; }
+										TD.bg1 { color:white; background-color:#595959; font-size:120% }
+										TD.bg2 { color:white; background-color:#4040FF; font-size:110% }
+										TD.bg3 { color:white; background-color:#8080FF; }
+										TD.test_passed { color:#ccc; }
+										TD.test_failed { color:red; }
+										TD.console { font-family:Courier New, Lucida Console; }
+									</STYLE>
+									<BODY>
+									<TABLE>
+										<TR>
+											<TD align="centre">
+											<IMG SRC="http://dashboard.protegrity.com/static/eb749496/images/headshot.png"/>
+											</TD>
+											<TD valign="left"><B style="font-size: 200%;">Jenkins Build Results</B></TD>
+										</TR>
+										<TR>
+											<TD>Build Url</TD>
+											<TD>: <A href="${BUILD_URL}">${JOB_NAME}</A></TD>
+										</TR>
+										<TR>
+											<TD>Product</TD>
+											<TD>: FileProtector</TD>
+										</TR>
+										<TR>
+											<TD><b>FP Version</b></TD>
+											<TD>: <b>$FP_VERSION</b></TD>
+										</TR>
+										<TR>
+										   <TD>Build Number</TD>
+										   <TD>: ${BUILD_NUMBER}</TD>
+										</TR>
+									</TABLE>    
+									<TABLE>
+										<TR bgcolor="lightblue">
+											<td width="10%"><b>RHEL63 (Kernel : 2.6.32-696.1.1.el6.x86_64)</b></td>
+										</TR>
+										<TR>
+										<td>Build : ${Build_Stage['BA_FP_RHEL6.3_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL6.3_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL6.3_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL6.3_x64']} <br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL6.3_x64']}<br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL6.3_x64']}</td>
+										</TR>
+    						         	        <TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>RHEL68 (Kernel : 2.6.32-642.15.1.el6.x86_64)</b></td>
+                                            </TR>
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_RHEL6.8_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL6.8_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL6.8_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL6.8_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL6.8_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL6.8_x64']}</td>
+                                            </TR>
+											
+						         	        <TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>RHEL71 (Kernel : 3.10.0-229.1.2.el7.x86_64)</b></td>
+                                            </TR>
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_RHEL7.1_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL7.1_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL7.1_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL7.1_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL7.1_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL7.1_x64']}</td>
+                                            </TR>
+										
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>RHEL72 (Kernel : 3.10.0-327.el7.x86_64)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_RHEL7.2_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL7.2_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL7.2_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL7.2_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL7.2_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL7.2_x64']}</td>
+                                            </TR>
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>RHEL73 (Kernel : 3.10.0-514.el7.x86_64)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_RHEL7.3_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_RHEL7.3_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_RHEL7.3_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_RHEL7.3_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_RHEL7.3_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_RHEL7.3_x64']} </td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>SLES11_x32 (Kernel : 2.6.32.12-0.7-pae , 3.0.13-0.27-pae)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_SLES11SP1_x32_Linux-2.6-kernel']}</td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>SLES11_x64 (Kernel : 2.6.32.12-0.7-default , 3.0.13-0.27-default)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_SLES11SP1_x64_Linux2.6-kernel']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_SLES11SP1_x64_Linux2.6-kernel']}</td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>SLES12_x64 (Kernel : 3.12.49-11-default)</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_SLES12-SP1_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_SLES12-SP1_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_SLES12-SP1_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_SLES12-SP1_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_SLES12-SP1_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_SLES12-SP1_x64']}</td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>WIN8</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_WIN8R2_SP1_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_WIN8R2_SP1_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_WIN8R2_SP1_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_WIN8R2_SP1_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_WIN8R2_SP1_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_WIN8R2_SP1_x64']} </td>
+                                            </TR>
+											
+											<TR bgcolor="lightskyblue">
+                                                <td width="10%"><b>WIN12</b></td>
+                                            </TR>
+											
+											<TR>
+                                                <td>Build : ${Build_Stage['BA_FP_WIN12R2_SP1_x64']} <br> AutoProvision AQA : ${AutoProvision_AQA_Stage['BA_FP_WIN12R2_SP1_x64']} <br> Install AQA : ${Install_AQA_Stage['BA_FP_WIN12R2_SP1_x64']}<br> Execute Functional Tests : ${EFT_Stage['BA_FP_WIN12R2_SP1_x64']}<br> Deprovision AQA : ${Deprovision_AQA_Stage['BA_FP_WIN12R2_SP1_x64']} <br> Functional Tests Report : ${HTMLLINK['BA_FP_WIN12R2_SP1_x64']} </td>
+                                            </TR>
+											
+								</TABLE><br><br>
+					"""
+
+					if (currentBuild.result == 'SUCCESS') {
+						emailext (
+							from: 'tejas.nadgoud@protegrity.com',
+							subject: subject,
+							mimeType: 'text/html',
+							body: passedDetails,
+							to: 'tejas.nadgoud@protegrity.com'
+						)
+					} else {
+						emailext (
+							from: 'tejas.nadgoud@protegrity.com',
+							subject: subject,
+							mimeType: 'text/html',
+							body: failedDetails,
+							to: 'tejas.nadgoud@protegrity.com'
+						)
+					}
+		}	
+	}	
+} // node('AutoProvision')

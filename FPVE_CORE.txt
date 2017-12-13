@@ -1,0 +1,630 @@
+def labels = []
+def buildlabels = []
+def catalog = [:]
+def JSystemlabels = [:]
+def Build_Stage = [:]
+def AutoProvision_AQA_Stage = [:]
+def Install_AQA_Stage = [:]
+def EFT_Stage = [:]
+def Deprovision_AQA_Stage = [:]
+def HTMLLINK = [:]
+def ESA_CATALOG = ''
+def Rhel_Cent = ''
+def Sles = ''
+def Rhel_Kernel='2.6.32-642.15.1.el6.x86_64'
+def Sles_Kernel='2.6.32.12-0.7-default'
+def Build_Time=''
+import groovy.time.*
+
+def projectProperties = [
+    [$class: 'BuildDiscarderProperty',strategy: [$class: 'LogRotator', numToKeepStr: '5']],gitLabConnection('Gitlab')]
+
+def specificCause = currentBuild.rawBuild.getCause(hudson.model.Cause$UserIdCause).properties.shortDescription
+
+def loadProperties_Linux(nodeName,PropertiesFilePath,PropertiesFile) {
+    node (nodeName) {
+        dir(PropertiesFilePath) {
+            properties_linux = readProperties file: PropertiesFile
+        }
+    }
+}
+
+if (params.'Rhel6' || params.'Rhel7' || params.'Centos6' || params.'Centos7') {
+	buildlabels.add('RHEL/CentOS')
+	Build_Stage['RHEL/CentOS'] = 'N.A'
+}
+
+if (params.'Sles11' || params.'Sles12') {
+	buildlabels.add('SLES')
+	Build_Stage['SLES'] = 'N.A'
+}
+
+if ( params.'Rhel6' ) {
+    labels.add('Rhel6') // can be used for autoprovision aqa machines
+    catalog['Rhel6'] = 'vApp_FP_RHEL6.3_x64'
+	AutoProvision_AQA_Stage['Rhel6'] = 'N.A'
+	Install_AQA_Stage['Rhel6'] = 'N.A'
+	EFT_Stage['Rhel6'] = 'N.A'
+	Deprovision_AQA_Stage['Rhel6'] = 'N.A'
+	HTMLLINK['Rhel6'] = 'N.A'
+}
+
+if ( params.'Rhel7' ) {
+    labels.add('Rhel7') // can be used for autoprovision aqa machines
+    catalog['Rhel7'] = 'vApp_FP_RHEL7.1_x64'
+	AutoProvision_AQA_Stage['Rhel7'] = 'N.A'
+	Install_AQA_Stage['Rhel7'] = 'N.A'
+	EFT_Stage['Rhel7'] = 'N.A'
+	Deprovision_AQA_Stage['Rhel7'] = 'N.A'
+	HTMLLINK['Rhel7'] = 'N.A'
+}
+
+if ( params.'Centos6' ) {
+    labels.add('Centos6') // can be used for autoprovision aqa machines
+    catalog['Centos6'] = 'vApp_FP_CENTOS6_x64'
+	AutoProvision_AQA_Stage['Centos6'] = 'N.A'
+	Install_AQA_Stage['Centos6'] = 'N.A'
+	EFT_Stage['Centos6'] = 'N.A'
+	Deprovision_AQA_Stage['Centos6'] = 'N.A'
+	HTMLLINK['Centos6'] = 'N.A'
+}
+
+if ( params.'Centos7' ) {
+    labels.add('Centos7') // can be used for autoprovision aqa machines
+    catalog['Centos7'] = 'vApp_FP_CENTOS7_x64'
+	AutoProvision_AQA_Stage['Centos7'] = 'N.A'
+	Install_AQA_Stage['Centos7'] = 'N.A'
+	EFT_Stage['Centos7'] = 'N.A'
+	Deprovision_AQA_Stage['Centos7'] = 'N.A'
+	HTMLLINK['Centos7'] = 'N.A'
+}
+
+if ( params.'Sles11' ) {
+    labels.add('Sles11') // can be used for autoprovision aqa machines
+    catalog['Sles11'] = 'vApp_FP_SLES11_x64'
+	AutoProvision_AQA_Stage['Sles11'] = 'N.A'
+	Install_AQA_Stage['Sles11'] = 'N.A'
+	EFT_Stage['Sles11'] = 'N.A'
+	Deprovision_AQA_Stage['Sles11'] = 'N.A'
+	HTMLLINK['Sles11'] = 'N.A'
+}
+
+if ( params.'Sles12' ) {
+    labels.add('Sles12') // can be used for autoprovision aqa machines
+    catalog['Sles12'] = 'vApp_FP_SLES12_x64'
+	AutoProvision_AQA_Stage['Sles12'] = 'N.A'
+	Install_AQA_Stage['Sles12'] = 'N.A'
+	EFT_Stage['Sles12'] = 'N.A'
+	Deprovision_AQA_Stage['Sles12'] = 'N.A'
+	HTMLLINK['Sles12'] = 'N.A'
+}
+
+// Selecting which ESA catalog to choose to create ESA
+if (params.ESA_VERSION == '664'){
+	ESA_CATALOG = 'Automated_ESA_6.6.4'
+} else if (params.ESA_VERSION == '665'){
+	ESA_CATALOG = 'Automated_ESA_6.6.5'
+} else if (params.ESA_VERSION == '70'){
+	ESA_CATALOG = 'Automated_ESA_7.0'
+}
+
+println "FPVE_Core will be tested on" +labels
+println "catalogs created will be of $catalog" 
+
+node('BA_FP_RHEL6.8_x64') {
+	try {
+		stage('Build') {
+				try {
+					def builders = [:]
+					for (x in buildlabels) {
+						def buildlabel = x
+						builders[buildlabel] = {
+							try {
+								if (buildlabel == 'SLES') {
+									node('BA_FP_SLES11SP1_x64_Linux2.6-kernel') {
+									cleanWs()
+									checkout([$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FPVE-Core']], workspaceUpdater: [$class: 'UpdateUpdater']])
+										withEnv(["FP_VERSION=$FP_VERSION"]) {
+											sh '''
+											echo "${FP_VERSION}"
+											./fetch_pcc_pep.sh ${FP_VERSION}
+											mkdir -p build
+											cd build
+											cmake -i -G"Unix Makefiles" ../
+											make
+											make deploy
+											'''
+											dir(WORKSPACE+'/build/install') {
+												stash includes: 'FileProtector_SLES*.tgz', name: 'Installer_Sles'
+											}
+										}
+									}
+								}
+														
+								if (buildlabel != 'SLES') {
+										cleanWs()
+										checkout([$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FPVE-Core']], workspaceUpdater: [$class: 'UpdateUpdater']])
+										withEnv(["FP_VERSION=$FP_VERSION"]) {
+												sh '''
+												echo "${FP_VERSION}"
+												./fetch_pcc_pep.sh ${FP_VERSION}
+												mkdir -p build
+												cd build
+												cmake -i -G"Unix Makefiles" ../
+												make
+												make deploy
+												'''
+												Rhel_Cent = 'Passed'
+											dir(WORKSPACE+'/build/install') {
+													stash includes: 'FileProtector_CentOS*.tgz', name: 'Installer_CentOS'
+													stash includes: 'FileProtector_RHEL*.tgz', name: 'Installer_Rhel'
+											}
+										}
+								}
+								
+								Build_Stage[buildlabel] = 'Passed'
+							} catch(error) {
+								print error
+								Build_Stage[buildlabel] = 'Failed'
+								Rhel_Cent = 'Failed'
+								Sles = 'Failed'
+								throw error
+								//labels.remove(label)
+								//catalog.remove(label)
+							}
+						}
+					}
+					parallel builders	
+				} catch (error1) {
+					print error1
+				}
+			}
+			
+			if (Rhel_Cent == 'Failed') {
+				labels.remove('Rhel6')
+				labels.remove('Rhel7')
+				labels.remove('Centos6')
+				labels.remove('Centos7')
+				currentBuild.result = 'Failed'
+			}
+			
+			if (Sles == 'Failed') {
+				labels.remove('Sles11')
+				labels.remove('Sles12')
+				currentBuild.result = 'Failed'
+			}
+			
+		if(params.EXECUTE_FUNCTIONAL_TESTS) {	
+			if (labels) {
+				stage('AutoProvision AQA') {
+					try {
+							def builders = [:]
+							for (x in labels) {
+								def label = x
+								builders[label] = {
+									try {
+										dir(label) {
+											deleteDir()
+											echo "Checking out DevOps repo"
+											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud']], workspaceUpdater: [$class: 'UpdateUpdater']]
+											echo "Creating AQA machines for $labels"
+											def AQA_VAPP_NAME = label
+											withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+												withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","FP_VERSION=$FP_VERSION","WORKSPACE=$WORKSPACE","label=$label"]) {
+													sh '''
+													randNum=`echo $RANDOM % 200 + 1 | bc`
+													sleep $randNum
+													./Create-Stop-JSystem-Machine.sh FPVE_CORE-${FP_VERSION}-${BUILD_NUMBER} CREATE $JENKINS_USERNAME $JENKINS_PASSWORD 1 $AQA_VAPP_NAME
+													
+													cd $WORKSPACE/$label/vApp_Files
+													vm_name=`echo AQA-"$AQA_VAPP_NAME"-FPVE_CORE-"$FP_VERSION"-"$BUILD_NUMBER"`
+													echo "vm_name=$vm_name" > $WORKSPACE/$label/variables.properties
+													
+													'''
+													loadProperties_Linux('BA_FP_RHEL6.8_x64',"$WORKSPACE/"+label,"variables.properties")
+													echo properties_linux.vm_name
+													JSystemlabels["$label"] = properties_linux.vm_name
+													print "$JSystemlabels"
+												}
+											}
+										}
+										AutoProvision_AQA_Stage[label] = 'Passed'
+									} catch(error1) {
+										AutoProvision_AQA_Stage[label] = 'Failed'
+										print error1
+										labels.remove(label)
+										catalog.remove(label)
+										throw error1
+									}
+								}
+							}
+							parallel builders
+					} catch(error) {
+						currentBuild.result = 'UNSTABLE'
+						print error
+					}
+				}
+			}
+			
+			print "$labels"
+			print "$catalog"
+			
+			if (labels) {	
+				stage('Install AQA') {
+				   try {
+					   def builders = [:]
+					   for (x in labels) {
+						   def label = x
+						   if (JSystemlabels[label]) {
+							   def aqanode = JSystemlabels[label]
+								builders[aqanode] = {
+									node(aqanode) {
+											try {
+												print "Checking out AQA trunk"
+												checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk']], workspaceUpdater: [$class: 'UpdateUpdater']]
+												withEnv(["aqanodename=$aqanode"]) {
+													sh '''
+													/opt/apache-maven-3.0.4/bin/mvn install
+													cd runnerQA/target
+													rm -rf /home/jenkins/AQA_SVN
+													mkdir -p /home/jenkins/AQA_SVN
+													cp AQA*.jar /home/jenkins/AQA_SVN
+													cd /home/jenkins/AQA_SVN
+													jar xf AQA*.jar
+													cd runner
+													mkdir -p log/current
+													rm -rf pom.xml
+													cp $WORKSPACE/runnerQA/src/main/resources/runner/pom.xml .
+													chmod -R 777 *
+													cd target
+													./extract-tests.sh
+													cd classes/sut
+													rm -rf sut_master.xml
+													cd /home/jenkins/AQA_SVN/runner
+													sed "/tests.dir=/ s/=.*/=\\/home\\/jenkins\\/AQA_SVN\\/runner\\/target\\/classes/" jsystem.properties > jsystem.properties.tmp && mv jsystem.properties.tmp jsystem.properties        
+													sed "/tests.src=/ s/=.*/=\\/home\\/jenkins\\/AQA_SVN\\/runner\\/src\\/main\\/java/" jsystem.properties > jsystem.properties.tmp && mv jsystem.properties.tmp jsystem.properties
+													#dos2unix jsystem.properties
+													'''
+													dir('/root/latest') {
+														if (label == 'Rhel6' || label == 'Rhel7'){
+															unstash 'Installer_Rhel'
+														}
+														if (label == 'Centos6' || label == 'Centos7'){
+															unstash 'Installer_CentOS'
+														}
+														if (label == 'Sles11' || label == 'Sles12'){
+															unstash 'Installer_Sles'
+														}
+														
+													}
+												}
+												Install_AQA_Stage[label] = 'Passed'
+											} catch(error) {
+												Install_AQA_Stage[label] = 'Failed'
+												print error
+												JSystemlabels.remove(label)
+												labels.remove(label)
+												catalog.remove(label)
+												throw error
+											}
+									}
+								}
+						   }
+					   }
+					   parallel builders
+					} catch(error3) {
+					print error3
+					currentBuild.result = 'UNSTABLE'
+					}
+				}
+			}
+			
+			if (labels) {
+				stage('Execute Functional Tests') {
+					try {
+						def builders = [:]
+						for (x in labels) {
+							def label = x
+							if (JSystemlabels[label]) {
+								def aqanode = JSystemlabels[label]
+								builders[aqanode] = {
+									node(aqanode) {
+										try {
+											withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+												withEnv(["ESA_CATALOG=$ESA_CATALOG","testenv=${catalog[label]}","FUNCTIONAL_TEST_SCENARIOS=${params.FUNCTIONAL_TEST_SCENARIOS}","INSTALLATION_SCENARIO=${params.INSTALLATION_SCENARIO}"]) {
+													print "Creating ESA and Test machines for Linux machines"				
+														sh '''
+														cd /home/jenkins/AQA_SVN/runner
+														echo "esaVappTemplate=$ESA_CATALOG">>summary.properties
+														echo "protectorVappTemplate=$testenv">>summary.properties
+														echo "#################### summary.properties file #######################"
+														cat summary.properties
+														cd target/classes/sut
+														rm -rf sut_master.xml
+														cp sut_master_ci.xml sut_master.xml
+														sed -i "s/{AQA_USERNAME}/$JENKINS_USERNAME/g" sut_master.xml
+														sed -i "s/{AQA_PASSWORD}/$JENKINS_PASSWORD/g" sut_master.xml
+														echo "###################### sut_master.xml file #########################"
+														cat sut_master.xml
+														'''	
+													dir('/home/jenkins/AQA_SVN/runner') {
+		/*												if (params.Automatic_Nightly_Weekend_Scenarios ) {
+															sh '''
+															echo "Scenarios will be as executed follows :\n1) Mon-Thu : /scenarios/6.6.2/FileProtector/Smoke_Suite,/scenarios/6.6.2/FileProtector/FileEncryption_RCWD\n2)Friday : All scenarios"
+															DAY=`date +%A`
+															if [[ "$DAY" == "Friday" ]]; then
+																echo "Its Friday ! All scenarios will be run today"
+																FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/FPVE_Setup,/scenarios/6.6.2/FileProtector/FPVE_Teardown
+																echo "Scenarios executed will be $FUNCTIONAL_TEST_SCENARIOS"
+															else
+																echo "Its not friday , only smoke_suit and RCWD tests will be run"
+																FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/FPVE_Setup,/scenarios/6.6.2/FileProtector/FPVE_Teardown
+																echo "Scenarios executed will be $FUNCTIONAL_TEST_SCENARIOS"
+															fi
+															'''
+														}
+		*/												
+															sh '''
+															export DISPLAY=:0.0
+															execCommand_ScenarioList="-Dscenario="
+															execCommand_SutList="-Dsut="
+															#execCommand_ScenarioList=$execCommand_ScenarioList"$INSTALLATION_SCENARIO"
+															#execCommand_SutList=$execCommand_SutList"default.xml"
+															for currentScenario in ${FUNCTIONAL_TEST_SCENARIOS//,/ }; do
+															execCommand_ScenarioList=$execCommand_ScenarioList",$currentScenario"
+															execCommand_SutList=$execCommand_SutList",default.xml"
+															done
+															/opt/apache-maven-3.0.4/bin/mvn -e jsystem:run $execCommand_ScenarioList $execCommand_SutList
+															
+															'''
+															print "Stashing the log folder"
+															dir('log') {
+																stash includes: 'current/**/*', name: 'Logs_'+label
+															}
+													}
+												}
+											}
+											EFT_Stage[label] = 'Passed'
+										} catch(error4) {
+											EFT_Stage[label] = 'Failed'
+											print error4
+											JSystemlabels.remove(label)
+											labels.remove(label)
+											catalog.remove(label)
+											throw error
+										}
+									}
+								}	
+							}		
+						}
+						parallel builders
+					} catch(error) {
+						print error
+						currentBuild.result = 'UNSTABLE'
+					}
+				}
+			}
+			
+			if (labels) {
+				stage('Publish HTML reports') {
+					try {
+						def builders = [:]
+						for (x in labels) {
+							def label = x
+							builders[label] = {
+								node('BA_FP_RHEL6.8_x64') {
+									withEnv(["label=$label","WORKSPACE=$WORKSPACE"]) {
+										try {
+											dir(WORKSPACE+'/'+label+'/'+'log') {
+												unstash 'Logs_'+label
+											}
+											publishHTML([allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true, reportDir: label+'/'+'log'+'/'+'current', reportFiles: 'index.html', reportName: 'HTML Report for '+ label, reportTitles: 'Functional_Tests_Report'])
+											junit allowEmptyResults: true, testResults: label+'/'+'log'+'/'+'current'+'/'+'TEST-JSystem_JUnit_report.xml'
+										} catch(error4) {
+											throw error4
+											labels.remove(label)
+											catalog.remove(label)
+											JSystemlabels.remove(label)
+											}
+									}
+								}
+							}
+						}
+						parallel builders
+					} catch (error) {
+						print error
+						currentBuild.result = 'UNSTABLE'
+					}
+				}
+			}
+			
+				stage('Powering off AQA machines') {
+				try {
+					if (labels) {
+						def builders = [:]
+						for (x in labels) {
+							def label = x
+							builders[label] = {
+								try {
+									dir(label) {
+										//echo "Checking out DevOps repo"
+										//checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud']], workspaceUpdater: [$class: 'UpdateUpdater']]
+										//echo "Creating AQA machines for $labels"
+										def AQA_VAPP_NAME = label
+										withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+											withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","FP_VERSION=$FP_VERSION","WORKSPACE=$WORKSPACE","label=$label"]) {
+												sh '''
+												./Create-Stop-JSystem-Machine.sh FPVE_CORE-${FP_VERSION}-${BUILD_NUMBER} STOP $JENKINS_USERNAME $JENKINS_PASSWORD 1 $AQA_VAPP_NAME	
+												'''
+											}
+										}
+									}
+									Deprovision_AQA_Stage[label] = 'Passed'
+									println "$Deprovision_AQA_Stage"
+								} catch(error1) {
+									print error1
+									Deprovision_AQA_Stage[label] = 'Failed'
+									labels.remove(label)
+									catalog.remove(label)
+									throw error1
+								}
+							}
+						}
+						parallel builders
+					} else {
+						print "No platforms selected to test"
+					}
+				} catch(error) {
+					print error
+				}
+			}
+		}
+	} catch(errorFinal) {
+		print errorFinal
+		currentBuild.result = 'Failed'
+	} finally {
+		
+		print "Email Step"
+		stage('Email') {
+			def label = ''
+			for (x in labels) {
+				label = x 
+				withEnv(["label=$label","BUILD_URL=$BUILD_URL"]) {	
+					try {
+						sh '''
+						url="${BUILD_URL}HTML_Report_for_${label}"
+						curl --output /dev/null --silent --head --fail "$url";
+						'''
+						HTMLLINK[label] = '$BUILD_URL/HTML_Report_for_'+label
+					} catch(error) {
+						print error
+						HTMLLINK[label] = 'N.A'
+					}
+				}
+			}
+					def subject = ''
+						subject = "FPVE_CORE Build & Functional Tests Report"
+						
+					def Details = """				
+									<STYLE>
+									BODY, TABLE, TD, TH, P {
+										font-family:Verdana,Helvetica,sans serif;
+										font-size:11px;
+										color:black;
+										}
+										h1 { color:black; }
+										h2 { color:black; }
+										h3 { color:black; }
+										TD.bg1 { color:white; background-color:#595959; font-size:120% }
+										TD.bg2 { color:white; background-color:#4040FF; font-size:110% }
+										TD.bg3 { color:white; background-color:#8080FF; }
+										TD.test_passed { color:#ccc; }
+										TD.test_failed { color:red; }
+										TD.console { font-family:Courier New, Lucida Console; }
+									</STYLE>
+									<BODY>
+									
+									
+									
+									
+									
+									<TABLE>
+										<TR>
+											<TD align="centre">
+											<IMG SRC="http://dashboard.protegrity.com/static/eb749496/images/headshot.png"/>
+											</TD>
+											<TD valign="left"><B style="font-size: 200%;">Jenkins Build Results</B></TD>
+										</TR>
+										<TR>
+											<TD>Build Url</TD>
+											<TD>: <A href="${BUILD_URL}">${JOB_NAME}</A></TD>
+										</TR>
+										<TR>
+											<TD>Product</TD>
+											<TD>: FileProtector</TD>
+										</TR>
+										<TR>
+											<TD><b>FP Version</b></TD>
+											<TD>: <b>$FP_VERSION</b></TD>
+										</TR>
+										<TR>
+										   <TD>Build Number</TD>
+										   <TD>: ${BUILD_NUMBER}</TD>
+										</TR>
+										<TR>
+											<TD>Trigger</TD>
+											<TD>: ${specificCause}</TD>
+										</TR>
+									</TABLE>    
+									
+									
+									<TABLE>
+										<TR bgcolor="lightblue">
+											<td <b>Build Status</b></td>
+										</TR>
+										<TR>
+											<td>Rhel/CentOs ( Kernel: ${Rhel_Kernel} ) : ${Build_Stage['RHEL/CentOS']} <br> Sles ( Kernel: ${Sles_Kernel} ) : ${Build_Stage['SLES']} </td>
+										</TR>
+											
+									
+										<TR bgcolor="lightblue">
+											<td width="10%" <b> TA Rhel6 </b></td>
+										</TR>
+										<TR>
+											<td>AutoProvision AQA : ${AutoProvision_AQA_Stage['Rhel6']} <br> Install AQA : ${Install_AQA_Stage['Rhel6']}<br> Execute Functional Tests : ${EFT_Stage['Rhel6']} <br> Deprovision AQA : ${Deprovision_AQA_Stage['Rhel6']}<br> Html Report : ${HTMLLINK['Rhel6']}</td>
+										</TR>
+									
+
+										<TR bgcolor="lightblue">
+											<td <b> TA Rhel7 </b></td>
+										</TR>
+										<TR>
+											<td>AutoProvision AQA : ${AutoProvision_AQA_Stage['Rhel7']} <br> Install AQA : ${Install_AQA_Stage['Rhel7']}<br> Execute Functional Tests : ${EFT_Stage['Rhel7']} <br> Deprovision AQA : ${Deprovision_AQA_Stage['Rhel7']}<br> Html Report : ${HTMLLINK['Rhel7']}</td>
+										</TR>
+										
+										<TR bgcolor="lightblue">
+											<td <b> TA CentOs6 </b></td>
+										</TR>
+										<TR>
+											<td>AutoProvision AQA : ${AutoProvision_AQA_Stage['Centos6']} <br> Install AQA : ${Install_AQA_Stage['Centos6']}<br> Execute Functional Tests : ${EFT_Stage['Centos6']} <br> Deprovision AQA : ${Deprovision_AQA_Stage['Centos6']}<br> Html Report : ${HTMLLINK['Centos6']}</td>
+										</TR>
+										
+										<TR bgcolor="lightblue">
+											<td <b> TA CentOs7 </b></td>
+										</TR>
+										<TR>
+											<td>AutoProvision AQA : ${AutoProvision_AQA_Stage['Centos7']} <br> Install AQA : ${Install_AQA_Stage['Centos7']}<br> Execute Functional Tests : ${EFT_Stage['Centos7']} <br> Deprovision AQA : ${Deprovision_AQA_Stage['Centos7']}<br> Html Report : ${HTMLLINK['Centos7']}</td>
+										</TR>
+										
+										<TR bgcolor="lightblue">
+											<td <b> TA Sles11 </b></td>
+										</TR>
+										<TR>
+											<td>AutoProvision AQA : ${AutoProvision_AQA_Stage['Sles11']} <br> Install AQA : ${Install_AQA_Stage['Sles11']}<br> Execute Functional Tests : ${EFT_Stage['Sles11']} <br> Deprovision AQA : ${Deprovision_AQA_Stage['Sles11']}<br> Html Report : ${HTMLLINK['Sles11']}</td>
+										</TR>
+										
+										<TR bgcolor="lightblue">
+											<td <b> TA Sles12 </b></td>
+										</TR>
+										<TR>
+											<td>AutoProvision AQA : ${AutoProvision_AQA_Stage['Sles12']} <br> Install AQA : ${Install_AQA_Stage['Sles12']}<br> Execute Functional Tests : ${EFT_Stage['Sles12']} <br> Deprovision AQA : ${Deprovision_AQA_Stage['Sles12']}<br> Html Report : ${HTMLLINK['Sles12']}</td>
+										</TR>	
+										
+								</TABLE><br><br>
+					
+					"""
+	
+						emailext (
+							from: 'tejas.nadgoud@protegrity.com',
+							subject: subject,
+							mimeType: 'text/html',
+							body: Details,
+							to: 'tejas.nadgoud@protegrity.com'
+						)
+					
+					
+		}
+		
+	}
+    
+} // node('BA_FP_RHEL6.3_x64')
