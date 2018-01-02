@@ -1,3 +1,5 @@
+package view.run_input_required
+
 def labels = []
 def buildlabels = []
 def catalog = [:]
@@ -19,8 +21,6 @@ import groovy.time.*
 def projectProperties = [
     [$class: 'BuildDiscarderProperty',strategy: [$class: 'LogRotator', numToKeepStr: '5']],gitLabConnection('Gitlab')]
 
-def specificCause = currentBuild.rawBuild.getCause(hudson.model.Cause$UserIdCause).properties.shortDescription
-
 def loadProperties_Linux(nodeName,PropertiesFilePath,PropertiesFile) {
     node (nodeName) {
         dir(PropertiesFilePath) {
@@ -29,87 +29,159 @@ def loadProperties_Linux(nodeName,PropertiesFilePath,PropertiesFile) {
     }
 }
 
-if (params.'Rhel6' || params.'Rhel7' || params.'Centos6' || params.'Centos7') {
+		stage('Build Options') {
+			 try {
+				timeout(time: 60, unit: 'SECONDS') {
+					stage 'Build Options'
+					// Define an input step and capture the outcome from it.
+					params = input id: 'Run-test-suites',
+					message: 'Workflow Configuration',
+					ok: 'Okay',
+					parameters: [
+						[ 
+						$class: 'BooleanParameterDefinition',
+						defaultValue: false,
+						name: 'Rhel6',
+						description: 'Build and Test on Rhel6?'
+						],
+						[ 
+						$class: 'BooleanParameterDefinition',
+						defaultValue: true,
+						name: 'Rhel7',
+						description: 'Build and Test on Rhel7?'
+						],
+						[	
+						$class: 'BooleanParameterDefinition',
+						defaultValue: true,
+						name: 'Centos6',
+						description: 'Build and Test on Centos6?'
+						],
+						[ 
+						$class: 'BooleanParameterDefinition',
+						defaultValue: true,
+						name: 'Centos7',
+						description: 'Build and Test on Centos7?'
+						],              
+						[ 
+						$class: 'BooleanParameterDefinition',
+						defaultValue: true,
+						name: 'Sles11',
+						description: 'Build and Test on Sles11?'
+						],
+						[ 
+						$class: 'BooleanParameterDefinition',
+						defaultValue: true,
+						name: 'Sles12',
+						description: 'Build and Test on Sles12?'
+						],
+						[
+						$class: 'ChoiceParameterDefinition', choices: 'FP6.5.2.2xx\nFP6.6.2\nFP6.6.4\nFP6.6.5',
+						name: 'FP_VERSION',
+						description: 'Select Esa Version'
+						],
+						[
+						$class: 'ChoiceParameterDefinition', choices: '665\n664\n70',
+						name: 'ESA_VERSION',
+						description: 'Select Esa Version'
+						],
+						[ 
+						$class: 'BooleanParameterDefinition',
+						defaultValue: true,
+						name: 'EXECUTE_FUNCTIONAL_TESTS',
+						description: 'Execute Functional Tests?'
+						]
+					]
+						echo "ESA_VERSION: ${params.get('ESA_VERSION')}"
+						echo "FP_VERSION: ${params.get('FP_VERSION')}"
+						FP_VERSION="${params.get('FP_VERSION')}"
+				}
+			} catch(err){
+				params = ['Rhel6': true, 'Rhel7': true, 'Centos6': true, 'Centos7': true, 'Sles11': true, 'Sles12': true, 'ESA_VERSION': 665, 'FP_VERSION': 'FP6.5.2.2xx']
+			}
+		}
+
+if (params.Rhel6 || params.Rhel7 || params.Centos6 || params.Centos7) {
 	buildlabels.add('RHEL/CentOS')
-	Build_Stage['RHEL/CentOS'] = 'N.A'
+	Build_Stage['RHEL/CentOS'] = 'Not Run'
 }
 
-if (params.'Sles11' || params.'Sles12') {
+if (params.Sles11 || params.Sles12) {
 	buildlabels.add('SLES')
-	Build_Stage['SLES'] = 'N.A'
+	Build_Stage['SLES'] = 'Not Run'
 }
 
-if ( params.'Rhel6' ) {
+if (params.Rhel6) {
     labels.add('Rhel6') // can be used for autoprovision aqa machines
     catalog['Rhel6'] = 'vApp_FP_RHEL6.3_x64'
-	AutoProvision_AQA_Stage['Rhel6'] = 'N.A'
-	Install_AQA_Stage['Rhel6'] = 'N.A'
-	EFT_Stage['Rhel6'] = 'N.A'
-	Deprovision_AQA_Stage['Rhel6'] = 'N.A'
-	HTMLLINK['Rhel6'] = 'N.A'
+	AutoProvision_AQA_Stage['Rhel6'] = 'Not Run'
+	Install_AQA_Stage['Rhel6'] = 'Not Run'
+	EFT_Stage['Rhel6'] = 'Not Run'
+	Deprovision_AQA_Stage['Rhel6'] = 'Not Run'
+	HTMLLINK['Rhel6'] = 'Not Run'
 }
 
-if ( params.'Rhel7' ) {
+if (params.Rhel7) {
     labels.add('Rhel7') // can be used for autoprovision aqa machines
     catalog['Rhel7'] = 'vApp_FP_RHEL7.1_x64'
-	AutoProvision_AQA_Stage['Rhel7'] = 'N.A'
-	Install_AQA_Stage['Rhel7'] = 'N.A'
-	EFT_Stage['Rhel7'] = 'N.A'
-	Deprovision_AQA_Stage['Rhel7'] = 'N.A'
-	HTMLLINK['Rhel7'] = 'N.A'
+	AutoProvision_AQA_Stage['Rhel7'] = 'Not Run'
+	Install_AQA_Stage['Rhel7'] = 'Not Run'
+	EFT_Stage['Rhel7'] = 'Not Run'
+	Deprovision_AQA_Stage['Rhel7'] = 'Not Run'
+	HTMLLINK['Rhel7'] = 'Not Run'
 }
 
-if ( params.'Centos6' ) {
+if (params.Centos6) {
     labels.add('Centos6') // can be used for autoprovision aqa machines
     catalog['Centos6'] = 'vApp_FP_CENTOS6_x64'
-	AutoProvision_AQA_Stage['Centos6'] = 'N.A'
-	Install_AQA_Stage['Centos6'] = 'N.A'
-	EFT_Stage['Centos6'] = 'N.A'
-	Deprovision_AQA_Stage['Centos6'] = 'N.A'
-	HTMLLINK['Centos6'] = 'N.A'
+	AutoProvision_AQA_Stage['Centos6'] = 'Not Run'
+	Install_AQA_Stage['Centos6'] = 'Not Run'
+	EFT_Stage['Centos6'] = 'Not Run'
+	Deprovision_AQA_Stage['Centos6'] = 'Not Run'
+	HTMLLINK['Centos6'] = 'Not Run'
 }
 
-if ( params.'Centos7' ) {
+if (params.Centos7) {
     labels.add('Centos7') // can be used for autoprovision aqa machines
     catalog['Centos7'] = 'vApp_FP_CENTOS7_x64'
-	AutoProvision_AQA_Stage['Centos7'] = 'N.A'
-	Install_AQA_Stage['Centos7'] = 'N.A'
-	EFT_Stage['Centos7'] = 'N.A'
-	Deprovision_AQA_Stage['Centos7'] = 'N.A'
-	HTMLLINK['Centos7'] = 'N.A'
+	AutoProvision_AQA_Stage['Centos7'] = 'Not Run'
+	Install_AQA_Stage['Centos7'] = 'Not Run'
+	EFT_Stage['Centos7'] = 'Not Run'
+	Deprovision_AQA_Stage['Centos7'] = 'Not Run'
+	HTMLLINK['Centos7'] = 'Not Run'
 }
 
-if ( params.'Sles11' ) {
+if (params.Sles11) {
     labels.add('Sles11') // can be used for autoprovision aqa machines
     catalog['Sles11'] = 'vApp_FP_SLES11_x64'
-	AutoProvision_AQA_Stage['Sles11'] = 'N.A'
-	Install_AQA_Stage['Sles11'] = 'N.A'
-	EFT_Stage['Sles11'] = 'N.A'
-	Deprovision_AQA_Stage['Sles11'] = 'N.A'
-	HTMLLINK['Sles11'] = 'N.A'
+	AutoProvision_AQA_Stage['Sles11'] = 'Not Run'
+	Install_AQA_Stage['Sles11'] = 'Not Run'
+	EFT_Stage['Sles11'] = 'Not Run'
+	Deprovision_AQA_Stage['Sles11'] = 'Not Run'
+	HTMLLINK['Sles11'] = 'Not Run'
 }
 
-if ( params.'Sles12' ) {
+if (params.Sles12) {
     labels.add('Sles12') // can be used for autoprovision aqa machines
     catalog['Sles12'] = 'vApp_FP_SLES12_x64'
-	AutoProvision_AQA_Stage['Sles12'] = 'N.A'
-	Install_AQA_Stage['Sles12'] = 'N.A'
-	EFT_Stage['Sles12'] = 'N.A'
-	Deprovision_AQA_Stage['Sles12'] = 'N.A'
-	HTMLLINK['Sles12'] = 'N.A'
+	AutoProvision_AQA_Stage['Sles12'] = 'Not Run'
+	Install_AQA_Stage['Sles12'] = 'Not Run'
+	EFT_Stage['Sles12'] = 'Not Run'
+	Deprovision_AQA_Stage['Sles12'] = 'Not Run'
+	HTMLLINK['Sles12'] = 'Not Run'
 }
 
 // Selecting which ESA catalog to choose to create ESA
 if (params.ESA_VERSION == '664'){
 	ESA_CATALOG = 'Automated_ESA_6.6.4'
 } else if (params.ESA_VERSION == '665'){
-	ESA_CATALOG = 'Automated_ESA_6.6.5'
+   	ESA_CATALOG = 'Automated_ESA_6.6.5'
 } else if (params.ESA_VERSION == '70'){
-	ESA_CATALOG = 'Automated_ESA_7.0'
+   	ESA_CATALOG = 'Automated_ESA_7.0'
 }
 
 println "FPVE_Core will be tested on" +labels
-println "catalogs created will be of $catalog" 
+println "catalogs created will be of $catalog"
+println "Esa catalog used will be $ESA_CATALOG"
 
 node('BA_FP_RHEL6.8_x64') {
 	try {
@@ -123,8 +195,8 @@ node('BA_FP_RHEL6.8_x64') {
 								if (buildlabel == 'SLES') {
 									node('BA_FP_SLES11SP1_x64_Linux2.6-kernel') {
 									cleanWs()
-									checkout([$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FPVE-Core']], workspaceUpdater: [$class: 'UpdateUpdater']])
-										withEnv(["FP_VERSION=$FP_VERSION"]) {
+									checkout([$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FPVE-Core@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']])
+										withEnv(["FP_VERSION=${params.get('FP_VERSION')}"]) {
 											sh '''
 											echo "${FP_VERSION}"
 											./fetch_pcc_pep.sh ${FP_VERSION}
@@ -140,11 +212,11 @@ node('BA_FP_RHEL6.8_x64') {
 										}
 									}
 								}
-														
+																			
 								if (buildlabel != 'SLES') {
 										cleanWs()
-										checkout([$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FPVE-Core']], workspaceUpdater: [$class: 'UpdateUpdater']])
-										withEnv(["FP_VERSION=$FP_VERSION"]) {
+										checkout([$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FPVE-Core@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']])
+										withEnv(["FP_VERSION=${params.get('FP_VERSION')}"]) { 
 												sh '''
 												echo "${FP_VERSION}"
 												./fetch_pcc_pep.sh ${FP_VERSION}
@@ -206,11 +278,11 @@ node('BA_FP_RHEL6.8_x64') {
 										dir(label) {
 											deleteDir()
 											echo "Checking out DevOps repo"
-											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud']], workspaceUpdater: [$class: 'UpdateUpdater']]
+											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
 											echo "Creating AQA machines for $labels"
 											def AQA_VAPP_NAME = label
 											withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-												withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","FP_VERSION=$FP_VERSION","WORKSPACE=$WORKSPACE","label=$label"]) {
+												withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","FP_VERSION=${params.get('FP_VERSION')}","WORKSPACE=$WORKSPACE","label=$label"]) {
 													sh '''
 													randNum=`echo $RANDOM % 200 + 1 | bc`
 													sleep $randNum
@@ -261,10 +333,10 @@ node('BA_FP_RHEL6.8_x64') {
 									node(aqanode) {
 											try {
 												print "Checking out AQA trunk"
-												checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk']], workspaceUpdater: [$class: 'UpdateUpdater']]
+												checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
 												withEnv(["aqanodename=$aqanode"]) {
 													sh '''
-													/opt/apache-maven-3.0.4/bin/mvn install
+													/opt/apache-maven-3.0.4/bin/mvn install -Prelease-fileProtector
 													cd runnerQA/target
 													rm -rf /home/jenkins/AQA_SVN
 													mkdir -p /home/jenkins/AQA_SVN
@@ -331,7 +403,7 @@ node('BA_FP_RHEL6.8_x64') {
 									node(aqanode) {
 										try {
 											withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-												withEnv(["ESA_CATALOG=$ESA_CATALOG","testenv=${catalog[label]}","FUNCTIONAL_TEST_SCENARIOS=${params.FUNCTIONAL_TEST_SCENARIOS}","INSTALLATION_SCENARIO=${params.INSTALLATION_SCENARIO}"]) {
+												withEnv(["ESA_CATALOG=$ESA_CATALOG","testenv=${catalog[label]}","FUNCTIONAL_TEST_SCENARIOS=${params.get('FUNCTIONAL_TEST_SCENARIOS')}","INSTALLATION_SCENARIO=${params.get('INSTALLATION_SCENARIO')}"]) {
 													print "Creating ESA and Test machines for Linux machines"				
 														sh '''
 														cd /home/jenkins/AQA_SVN/runner
@@ -348,26 +420,21 @@ node('BA_FP_RHEL6.8_x64') {
 														cat sut_master.xml
 														'''	
 													dir('/home/jenkins/AQA_SVN/runner') {
-		/*												if (params.Automatic_Nightly_Weekend_Scenarios ) {
 															sh '''
-															echo "Scenarios will be as executed follows :\n1) Mon-Thu : /scenarios/6.6.2/FileProtector/Smoke_Suite,/scenarios/6.6.2/FileProtector/FileEncryption_RCWD\n2)Friday : All scenarios"
 															DAY=`date +%A`
 															if [[ "$DAY" == "Friday" ]]; then
 																echo "Its Friday ! All scenarios will be run today"
-																FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/FPVE_Setup,/scenarios/6.6.2/FileProtector/FPVE_Teardown
+																FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FPVE_Smoke_Suite,/scenarios/6.6.2/FPVE_Teardown
 																echo "Scenarios executed will be $FUNCTIONAL_TEST_SCENARIOS"
 															else
 																echo "Its not friday , only smoke_suit and RCWD tests will be run"
-																FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/FPVE_Setup,/scenarios/6.6.2/FileProtector/FPVE_Teardown
+																FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FPVE_Smoke_Suite,/scenarios/6.6.2/FPVE_Teardown
 																echo "Scenarios executed will be $FUNCTIONAL_TEST_SCENARIOS"
 															fi
-															'''
-														}
-		*/												
-															sh '''
+															
 															export DISPLAY=:0.0
-															execCommand_ScenarioList="-Dscenario="
-															execCommand_SutList="-Dsut="
+															execCommand_ScenarioList="-Dscenario=/scenarios/6.6.2/FPVE_Setup"
+															execCommand_SutList="-Dsut=default.xml"
 															#execCommand_ScenarioList=$execCommand_ScenarioList"$INSTALLATION_SCENARIO"
 															#execCommand_SutList=$execCommand_SutList"default.xml"
 															for currentScenario in ${FUNCTIONAL_TEST_SCENARIOS//,/ }; do
@@ -375,7 +442,6 @@ node('BA_FP_RHEL6.8_x64') {
 															execCommand_SutList=$execCommand_SutList",default.xml"
 															done
 															/opt/apache-maven-3.0.4/bin/mvn -e jsystem:run $execCommand_ScenarioList $execCommand_SutList
-															
 															'''
 															print "Stashing the log folder"
 															dir('log') {
@@ -448,11 +514,11 @@ node('BA_FP_RHEL6.8_x64') {
 								try {
 									dir(label) {
 										//echo "Checking out DevOps repo"
-										//checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud']], workspaceUpdater: [$class: 'UpdateUpdater']]
+										//checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
 										//echo "Creating AQA machines for $labels"
 										def AQA_VAPP_NAME = label
 										withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-											withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","FP_VERSION=$FP_VERSION","WORKSPACE=$WORKSPACE","label=$label"]) {
+											withEnv(["AQA_VAPP_NAME=$AQA_VAPP_NAME","BUILD_NUMBER=$BUILD_NUMBER","FP_VERSION=${params.get('FP_VERSION')}","WORKSPACE=$WORKSPACE","label=$label"]) {
 												sh '''
 												./Create-Stop-JSystem-Machine.sh FPVE_CORE-${FP_VERSION}-${BUILD_NUMBER} STOP $JENKINS_USERNAME $JENKINS_PASSWORD 1 $AQA_VAPP_NAME	
 												'''
@@ -478,6 +544,8 @@ node('BA_FP_RHEL6.8_x64') {
 					print error
 				}
 			}
+		} else {
+			print "Functional tests will not be executed"
 		}
 	} catch(errorFinal) {
 		print errorFinal
@@ -545,15 +613,11 @@ node('BA_FP_RHEL6.8_x64') {
 										</TR>
 										<TR>
 											<TD><b>FP Version</b></TD>
-											<TD>: <b>$FP_VERSION</b></TD>
+											<TD>: <b>${params.get('FP_VERSION')}</b></TD>
 										</TR>
 										<TR>
 										   <TD>Build Number</TD>
 										   <TD>: ${BUILD_NUMBER}</TD>
-										</TR>
-										<TR>
-											<TD>Trigger</TD>
-											<TD>: ${specificCause}</TD>
 										</TR>
 									</TABLE>    
 									
