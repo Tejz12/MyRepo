@@ -6,13 +6,11 @@ Calendar myDate = Calendar.getInstance();
 int dow = myDate.get (Calendar.DAY_OF_WEEK);
 boolean isWeekday = ((dow >= Calendar.MONDAY) && (dow <= Calendar.FRIDAY));
 if (isWeekday) {
-	time = 240
+	time = 180
 } else {
 	time = 20000
 }
-
 print "Time out for EFT Stage will be of $time minutes"
-
 
 def projectProperties = [
     [$class: 'BuildDiscarderProperty',strategy: [$class: 'LogRotator', numToKeepStr: '5']],gitLabConnection('Gitlab')]
@@ -191,7 +189,7 @@ node('AutoProvision') {
 						try { 
 							echo "Build Checkout"
 							echo "Checking out FileProtector repo"
-							checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.2']], workspaceUpdater: [$class: 'UpdateUpdater']]
+							checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.4/']], workspaceUpdater: [$class: 'UpdateUpdater']]
 							  echo "Cleaning build directory"
 							  dir('build') {
 							  deleteDir()
@@ -273,131 +271,15 @@ node('AutoProvision') {
 								}
 							}
 					
-							if( isUnix() ) {
-								if ( label == 'BA_FP_SLES11SP1_x32_Linux-2.6-kernel' ) {
-									withEnv(["WORKSPACE=$WORKSPACE"]) {
-										dir('build') {
-											sh '''
-											mkdir -p /root/FPInstaller
-											rm -rf /root/FPInstaller/*
-											mkdir -p /root/FPInstaller/2.6_files
-											mkdir -p /root/FPInstaller/3.x_files
-											cmake -i -G "Unix Makefiles" -DBUILD_64BIT=OFF ../
-											make
-											if [[ $? -ne 0 ]]; then
-												echo "make failed on sles_x32 2.6 kernel. Marking this build as failed"
-												exit 1
-											fi
-											make deploy
-											if [[ $? -ne 0 ]]; then
-												echo "make deploy failed on sles_x32 2.6 kernel. Marking this build as failed"
-												exit 1
-											fi
-											cd install
-											#cp *.tgz /root/FPInstaller
-											cd ../
-											cp bin/dfp_install_repack /root/FPInstaller
-											cp install/* /root/FPInstaller/2.6_files
-											'''
-										}
-										node('BA_FP_SLES11SP2_x32_Linux3.x-kernel') {
-											cleanWs()
-											echo "Checking out FileProtector repo on BA_FP_SLES11SP2_x32_Linux3.x-kernel" 
-											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.2']], workspaceUpdater: [$class: 'UpdateUpdater']]
-											echo "Cleaning build directory"
-											dir('build') {
-												sh '''    
-												cmake -i -G "Unix Makefiles" -DBUILD_64BIT=OFF ../
-												make
-												if [[ $? -ne 0 ]]; then
-													echo "make failed on sles_x32 3.x kernel. Marking this build as failed"
-													exit 1
-												fi
-												make deploy
-												if [[ $? -ne 0 ]]; then
-													echo "make deploy failed on sles_x32 3.x kernel. Marking this build as failed"
-													exit 1
-												fi
-												cd install
-												#scp *.tgz root@10.10.51.106:/root/FPInstaller
-												scp * root@10.10.51.106:/root/FPInstaller/3.x_files
-												'''				
-											}
-										}
-										dir('/root/FPInstaller') {
-										sh '''
-										./dfp_install_repack 2.6_files 3.x_files
-										rm -rf $WORKSPACE/build/install/*.tgz
-										cd install*
-										cp -rf *.tgz $WORKSPACE/build/install
-										'''
-										}
-									}
-								}
-								if ( label == 'BA_FP_SLES11SP1_x64_Linux2.6-kernel' ) {
-									withEnv(["WORKSPACE=$WORKSPACE"]) {
-										dir('build') {
-											sh '''
-											mkdir -p /root/FPInstaller
-											rm -rf /root/FPInstaller/*
-											mkdir -p /root/FPInstaller/2.6_files
-											mkdir -p /root/FPInstaller/3.x_files
-											cmake -i -G "Unix Makefiles" ../
-											make
-											if [[ $? -ne 0 ]]; then
-												echo "make failed on sles_x64 2.6 kernel. Marking this build as failed"
-												exit 1
-											fi
-											make deploy
-											if [[ $? -ne 0 ]]; then
-												echo "make deploy failed on sles_x64 2.6 kernel. Marking this build as failed"
-												exit 1
-											fi
-											cd install
-											#cp *.tgz /root/FPInstaller
-											cd ../
-											cp bin/dfp_install_repack /root/FPInstaller
-											cp install/* /root/FPInstaller/2.6_files
-											'''
-										}
-										node('BA_FP_SLES11SP2_x64_Linux3.x') {
-											cleanWs()
-											echo "Checking out FileProtector repo on BA_FP_SLES11SP2_x64_Linux3.x" 
-											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.2']], workspaceUpdater: [$class: 'UpdateUpdater']]
-											echo "Cleaning build directory"
-											dir('build') {
-												sh '''    
-												cmake -i -G "Unix Makefiles" ../
-												make
-												if [[ $? -ne 0 ]]; then
-													echo "make failed on sles_x64 3.x kernel. Marking this build as failed"
-													exit 1
-												fi
-												make deploy
-												if [[ $? -ne 0 ]]; then
-													echo "make deploy failed on sles_x64 3.x kernel. Marking this build as failed"
-													exit 1
-												fi
-												cd install
-												#scp *.tgz root@10.10.50.116:/root/FPInstaller
-												scp * root@10.10.50.116:/root/FPInstaller/3.x_files
-												'''				
-											}
-										}
-										dir('/root/FPInstaller') {
-										sh '''
-										./dfp_install_repack 2.6_files 3.x_files
-										rm -rf $WORKSPACE/build/install/*.tgz
-										cd install*
-										cp -rf *.tgz $WORKSPACE/build/install
-										'''
-										}
-									}
-								}		
-								if ( label != 'BA_FP_SLES11SP1_x32_Linux-2.6-kernel' && label != 'BA_FP_SLES11SP1_x64_Linux2.6-kernel' ) {
+							if( isUnix() ) {		
+								withEnv(["label=$label"]) {
 									dir('build') {
-										sh '''    
+										sh '''
+										if [[ `echo $label | grep x32`  ]]; then
+											cmake -i -G "Unix Makefiles" -DBUILD_64BIT=OFF ../
+										else
 										cmake -i -G"Unix Makefiles" ../
+										fi
 										make
 										if [[ $? -ne 0 ]]; then
 											echo "make failed . Marking this build as failed"
@@ -505,7 +387,7 @@ node('AutoProvision') {
 							dir('DevOps') {
 							deleteDir()
 								echo "Checking out DevOps repo"
-								checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud']], workspaceUpdater: [$class: 'UpdateUpdater']]
+								checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
 								echo "Creating AQA machines for $labels"
 								try {
 									def AQA_VAPP_NAME = label.substring(6) //This will modify BA_FP_RHEL6_x64 to RHEL6_x64
@@ -554,7 +436,7 @@ node('AutoProvision') {
 									}
 									deleteDir()
 									echo "Checking out DevOps repo"
-									checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud']], workspaceUpdater: [$class: 'UpdateUpdater']]
+									checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/DevOps/AutoProvision_VCloud@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
 									try {
 										def AQA_VAPP_NAME = label.substring(6) //This will modify BA_FP_RHEL6_x64 to RHEL6
 										withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
@@ -604,7 +486,7 @@ node('AutoProvision') {
 												echo "@echo off" > slave.bat
 												echo "set secret_key=$secret_key" >> slave.bat
 												echo "set vm_name=$vm_name" >> slave.bat
-												echo "java -jar C:/jenkins/slave.jar -jnlpUrl http://dashboard.protegrity.com:8081/computer/%vm_name%/slave-agent.jnlp -secret %secret_key%" >> slave.bat
+												echo "java -jar C:/slave.jar -jnlpUrl http://dashboard.protegrity.com:8081/computer/%vm_name%/slave-agent.jnlp -secret %secret_key%" >> slave.bat
 												sshpass -p "protegrity" scp -o StrictHostKeyChecking=no slave.bat Administrator@$IP_ADDRESS:c:/users/Administrator/Desktop
 												# // Now we create a script task_scheduler.bat which will call the slave.bat script and have the agent connected in jenkins
 												#echo 'SchTasks /Create /SC HOURLY /NP /TN "dashboard slave" /TR "c:/users/Administrator/Desktop/slave.bat" /f' > task_scheduler.bat
@@ -680,7 +562,7 @@ node('AutoProvision') {
 										withEnv(["aqanodename=$aqanode"]) {	
 											sh '''
 									
-												/opt/apache-maven-3.0.4/bin/mvn install
+												/opt/apache-maven-3.0.4/bin/mvn install -Prelease-fileProtector
 												cd runnerQA/target
 												rm -rf /home/jenkins/AQA_SVN
 												mkdir -p /home/jenkins/AQA_SVN
@@ -712,52 +594,38 @@ node('AutoProvision') {
 									} else {
 										//Code to install AQA on Windows nodes
 										cleanWs()
-										print "Checking out AQA trunk"
-										checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk']], workspaceUpdater: [$class: 'UpdateUpdater']]
-										bat '''
-										java -version
-										C:\\Users\\jenkins\\apache-maven-3.0.4\\bin\\mvn install
-										'''
-										powershell '''
-										New-Item -ItemType Directory -Force -Path C:\\Users\\jenkins\\AQA_SVN
-										Remove-Item C:\\Users\\jenkins\\AQA_SVN\\* -Recurse -Force	
-										cd runnerQA\\target\\
-										copy AQA*.jar C:\\Users\\jenkins\\AQA_SVN
-										cd C:\\Users\\jenkins\\AQA_SVN\\
-										& jar xvf AQA*.jar
-										if($?)
-											{
-											"##################### AQA extraction succeeded ###########################"
+										withEnv(["WORKSPACE=$WORKSPACE"]) {
+											print "Checking out AQA trunk"
+											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk']], workspaceUpdater: [$class: 'UpdateUpdater']]
+											bat '''
+											java -version
+											C:\\Users\\jenkins\\apache-maven-3.0.4\\bin\\mvn clean install -Prelease-fileProtector
+											'''
+											bat '''
+											rmdir /s /q "C:\\Users\\jenkins\\AQA_SVN" 2>nul
+											mkdir C:\\Users\\jenkins\\AQA_SVN
+											cd runnerQA\\target\\
+											xcopy AQA*.jar C:\\Users\\jenkins\\AQA_SVN
+											cd C:\\Users\\jenkins\\AQA_SVN\\
+											jar xvf AQA*.jar
+											cd C:\\Users\\jenkins\\AQA_SVN\\runner
+											mkdir log
+											del pom.xml
+											xcopy %WORKSPACE%\\runnerQA\\src\\main\\resources\\runner\\pom.xml .
+											cd C:\\Users\\jenkins\\AQA_SVN\\runner\\target\
+											& extract-tests-register-dll.bat
+											if exist C:\\Users\\jenkins\\AQA_SVN\\runner\\target\\classes\\sut (
+												echo "---------sut folder exists.....Test extraction successful....Proceeding to next step------------"
+											) else (
+												"---------sut folder does not exist .... Test extraction failed ...Exiting------------------"
+												exit 1
+											)										
+											'''
+											// The following line places the FP installer in logged in user's home dir in latest folder
+											dir('C:/Users/Administrator/latest') {
+												deleteDir()
+												unstash label
 											}
-										else
-											{
-											"###################### AQA extraction failed #########################"
-											exit 1
-											}
-										echo "########################## Extracting the tests ##########################"
-										cd C:\\Users\\jenkins\\AQA_SVN\\runner
-										mkdir log
-										del pom.xml
-										copy $env:WORKSPACE\\runnerQA\\src\\main\\resources\\runner\\pom.xml .
-										'''
-										bat '''
-										cd C:\\Users\\jenkins\\AQA_SVN\\runner\\target\
-										& extract-tests-register-dll.bat
-										'''
-										powershell '''
-										if (Test-Path C:\\Users\\jenkins\\AQA_SVN\\runner\\target\\classes\\sut) {
-											"---------sut folder exists.....Test extraction successful....Proceeding to next step------------"
-										}
-										else {
-										"---------sut folder does not exist .... Test extraction failed ...Exiting------------------"
-										exit 1
-										}
-										pwd
-										'''
-										// The following line places the FP installer in logged in user's home dir in latest folder
-										dir('C:/Users/Administrator/latest') {
-											deleteDir()
-											unstash label
 										}
 									}
 									Install_AQA_Stage[label] = 'Passed'
@@ -826,11 +694,12 @@ node('AutoProvision') {
 													echo "#################### summary.properties ###############################"
 													type summary.properties
 													'''
-													powershell '''
-													(Get-Content -Path C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml) -replace [Regex]::Escape('{AQA_USERNAME}'),[Regex]::Escape($env:JENKINS_USERNAME) | Set-Content C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml
-													(Get-Content -Path C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml) -replace [Regex]::Escape('{AQA_PASSWORD}'),[Regex]::Escape($env:JENKINS_PASSWORD) | Set-Content C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml        
-													copy C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master.xml
-													Get-Content C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master.xml
+													bat '''
+													cscript c:\\replace.vbs "C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml" "{AQA_USERNAME}" "%JENKINS_USERNAME%"
+													cscript c:\\replace.vbs "C:/Users/jenkins/AQA_SVN/runner/target/classes/sut/sut_master_ci.xml" "{AQA_PASSWORD}" "%JENKINS_PASSWORD%"
+													del /F /Q C:\\Users\\jenkins\\AQA_SVN\\runner\\target\\classes\\sut\\sut_master.xml
+													cd C:\\Users\\jenkins\\AQA_SVN\\runner\\target\\classes\\sut\\
+													ren sut_master_ci.xml sut_master.xml
 													'''
 													}
 												}
@@ -857,7 +726,7 @@ node('AutoProvision') {
 		}
 
 		if (labels) {
-			timeout(time) {
+		//	timeout(time) {
 				stage('Execute Functional Tests') {
 					try {
 						def builders = [:]
@@ -869,40 +738,55 @@ node('AutoProvision') {
 									node(aqanode) {
 										try {
 											withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-												withEnv(["ESA_CATALOG=$ESA_CATALOG","testenv=${testlabels[label]}","FUNCTIONAL_TEST_SCENARIOS=${params.FUNCTIONAL_TEST_SCENARIOS}","INSTALLATION_SCENARIO=${params.INSTALLATION_SCENARIO}","label=$label","Automatic_Nightly_Weekend_Scenarios=${params.'Automatic_Nightly_Weekend_Scenarios'}","UNINSTALLATION_SCENARIO=$UNINSTALLATION_SCENARIO"]) {
+												withEnv(["node=$aqanode","ESA_CATALOG=$ESA_CATALOG","testenv=${testlabels[label]}","FUNCTIONAL_TEST_SCENARIOS=${params.FUNCTIONAL_TEST_SCENARIOS}","INSTALLATION_SCENARIO=${params.INSTALLATION_SCENARIO}","label=$label","Automatic_Nightly_Weekend_Scenarios=${params.'Automatic_Nightly_Weekend_Scenarios'}"]) {
 													if ( isUnix() ) {
 														dir('/home/jenkins/AQA_SVN/runner') {
 															sh '''
+															
+															echo -e "\n\n\n
+															####################################
+															#
+															# Start Apache server for Real time reports
+															#
+															####################################
+															"
+															#Stop Apache services and Firewall
+															service httpd stop
+															apachectl stop
+															service firewalld stop
+															ln -s /home/jenkins/AQA_SVN/runnner/log /var/www/html/
+															chmod -R 755 /var/www/html
+															#Start Apache services
+															service httpd start
+															apachectl start
+															AQAMachineIP=`curl -silent -u $JENKINS_USERNAME:$JENKINS_PASSWORD http://dashboard.protegrity.com/computer/${node}/config.xml | grep host | awk -F">" '{print $2}' | awk -F"<" '{print $1}'`
+															echo "Click link to view Real Time Functional Tests Reports : http://${AQAMachineIP}/log/current/index.html"
+															
 															if [[ $Automatic_Nightly_Weekend_Scenarios == "true" ]]; then
-																echo "Scenarios will be as executed follows :\n1) Mon-Thu : /scenarios/6.6.2/FileProtector/Smoke_Suite,/scenarios/6.6.2/FileProtector/FileEncryption_RCWD\n2)Friday : All scenarios"
+																echo "Scenarios will be as executed follows :\n1) Mon-Thu : /scenarios/6.6.2/Smoke_Suite,/scenarios/6.6.2/FileEncryption_RCWD\n2)Friday : All scenarios"
 																DAY=`date +%A`
 																if [[ "$DAY" == "Friday" ]]; then
 																	echo "Its Friday ! All scenarios will be run today"
-																	FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/Command_Delegation,/scenarios/6.6.2/FileProtector/Smoke_Suite,/scenarios/6.6.2/FileProtector/AC_FullCertification,/scenarios/6.6.2/FileProtector/SystemCall_Testcase,/scenarios/6.6.2/FileProtector/FE_FullCertification
+																	FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/Command_Delegation,/scenarios/6.6.2/Smoke_Suite,/scenarios/6.6.2/AC_FullCertification,/scenarios/6.6.2/SystemCall_Testcase,/scenarios/6.6.2/FE_FullCertification
 																	echo "Scenarios executed will be $FUNCTIONAL_TEST_SCENARIOS"
 																else
 																	echo "Its not friday , only smoke_suit and RCWD tests will be run"
-																	FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/Smoke_Suite,/scenarios/6.6.2/FileProtector/FileEncryption_RCWD
+																	FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/Smoke_Suite,/scenarios/6.6.2/FileEncryption_RCWD
 																	echo "Scenarios executed will be $FUNCTIONAL_TEST_SCENARIOS"
 																fi
 															fi
 															export DISPLAY=:0.0
-															#export XAUTHORITY=~/.Xauthority
-															#xhost +
 															execCommand_ScenarioList="-Dscenario="
 															execCommand_SutList="-Dsut="
-															#execCommand_ScenarioList=$execCommand_ScenarioList"scenarios/UpdateSummaryProperties"
-															#execCommand_SutList=$execCommand_SutList"default.xml"
-															execCommand_ScenarioList=$execCommand_ScenarioList"$INSTALLATION_SCENARIO"
+															execCommand_ScenarioList=${execCommand_ScenarioList}/scenarios/6.6.2/Installation
 															execCommand_SutList=$execCommand_SutList"default.xml"
 															for currentScenario in ${FUNCTIONAL_TEST_SCENARIOS//,/ }; do
 																execCommand_ScenarioList=$execCommand_ScenarioList",$currentScenario"
 																execCommand_SutList=$execCommand_SutList",default.xml"
 															done
-															execCommand_ScenarioList=$execCommand_ScenarioList,$UNINSTALLATION_SCENARIO
+															execCommand_ScenarioList=$execCommand_ScenarioList,/scenarios/6.6.2/Uninstallation
 															execCommand_SutList=$execCommand_SutList,default.xml
 															/opt/apache-maven-3.0.4/bin/mvn -e jsystem:run $execCommand_ScenarioList $execCommand_SutList
-															#/opt/apache-maven-3.0.4/bin/mvn -e jsystem:run -Dscenario=$UNINSTALLATION_SCENARIO -Dsut=default.xml
 															'''
 															print "Stashing the log folder"
 															dir('log') {
@@ -920,10 +804,10 @@ node('AutoProvision') {
 																set day=%DATE:~0,3%
 																if !day! == Fri (
 																	echo "Its friday .... Executing all scenarios"
-																	set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/AC_FullCertification,/scenarios/6.6.2/FileProtector/FE_FullCertification
+																	set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/AC_FullCertification
 																) else (
 																	echo "Its a weekday . Executing only RCWD scenario"
-																	set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/FileProtector/FileEncryption_RCWD
+																	set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/Test_FE,/scenarios/6.6.2/FileEncryption_RCWD
 																)
 																echo "Scenarios executed will be : !FUNCTIONAL_TEST_SCENARIOS!"
 															)
@@ -935,10 +819,10 @@ node('AutoProvision') {
 
 															REM Remove the below comments once remote install is done for fp windows.
 
-															set execCommand_ScenarioList=%execCommand_ScenarioList%%INSTALLATION_SCENARIO%
+															set execCommand_ScenarioList=%execCommand_ScenarioList%/scenarios/6.6.2/Installation
 															set execCommand_SutList=%execCommand_SutList%default.xml
 
-															set "execCommand_ScenarioList=%execCommand_ScenarioList%,%FUNCTIONAL_TEST_SCENARIOS%,%UNINSTALLATION_SCENARIO%"
+															set "execCommand_ScenarioList=%execCommand_ScenarioList%,%FUNCTIONAL_TEST_SCENARIOS%,/scenarios/6.6.2/Uninstallation"
 
 															REM SETLOCAL EnableDelayedExpansion
 															For %%j in (%FUNCTIONAL_TEST_SCENARIOS%) Do Set /A count+=1
@@ -961,7 +845,6 @@ node('AutoProvision') {
 
 															cd C:\\Users\\jenkins\\AQA_SVN\\runner
 															C:\\Users\\jenkins\\apache-maven-3.0.4\\bin\\mvn -e jsystem:run %execCommand_ScenarioList% %execCommand_SutList%
-															C:\\Users\\jenkins\\apache-maven-3.0.4\\bin\\mvn -e jsystem:run -Dscenario=$UNINSTALLATION_SCENARIO -Dsut=default.xml
 															'''
 															print "Stashing the log folder"
 														}
@@ -993,7 +876,7 @@ node('AutoProvision') {
 						currentBuild.result = 'UNSTABLE'
 					}
 				}
-			}
+		//	}
 		}
 
 		if (labels) {
