@@ -1,4 +1,19 @@
-// To Do Next : Add code to send tgz from AutoProvision machine to AQA machine in Linux . Same for windows .
+package view.run_input_required
+
+// Global array holding the labels on where to build and test
+def FP_VERSION = '664'
+def labels = []
+def Build_Stage = [:]
+def AutoProvision_AQA_Stage = [:]
+def Install_AQA_Stage = [:]
+def EFT_Stage = [:]
+def Deprovision_AQA_Stage = [:]
+def testlabels = [:]
+def JSystemlabels = [:]
+def HTMLLINK = [:]
+def ArchiveBuildArtifacts = false
+def ESA_CATALOG = ''
+def testenv = ''
 
 /* Only keep the 2 most recent builds. */
 def time = ''
@@ -36,38 +51,172 @@ def loadProperties_Windows(nodeName,PropertiesFilePath,PropertiesFile) {
     }
 }
 
-// Global array holding the labels on where to build and test
-def FP_VERSION = '662'
-def labels = []
-def Build_Stage = [:]
-def AutoProvision_AQA_Stage = [:]
-def Install_AQA_Stage = [:]
-def EFT_Stage = [:]
-def Deprovision_AQA_Stage = [:]
-def testlabels = [:]
-def JSystemlabels = [:]
-def HTMLLINK = [:]
-def ArchiveBuildArtifacts = false
-def ESA_CATALOG = ''
-def testenv = ''
+	stage('Build Options') {
+		try {
+			timeout(time: 60, unit: 'SECONDS') {
+				// Define an input step and capture the outcome from it.
+				params = input id: 'Run-test-suites',
+				message: 'Workflow Configuration',
+				ok: 'Okay',
+				parameters: [
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: false,
+					name: 'RHEL5_x64',
+					description: 'Build and Test on RHEL5_x64?'
+					],
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: true,
+					name: 'RHEL6.3_x64',
+					description: 'Build and Test on RHEL6.3_x64?'
+					],
+					[	
+					$class: 'BooleanParameterDefinition',
+					defaultValue: true,
+					name: 'RHEL6.8_x64',
+					description: 'Build and Test on RHEL6.8_x64?'
+					],
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: true,
+					name: 'RHEL7.1_x64',
+					description: 'Build and Test on RHEL7.1_x64?'
+					],              
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: true,
+					name: 'RHEL7.2_x64',
+					description: 'Build and Test on RHEL7.2_x64?'
+					],
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: true,
+					name: 'RHEL7.3_x64',
+					description: 'Build and Test on RHEL7.3_x64?'
+					],
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: false,
+					name: 'SLES11_x32',
+					description: 'Build and Test on SLES11_x32?'
+					],
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: false,
+					name: 'SLES11_x64',
+					description: 'Build and Test on SLES11_x64?'
+					],
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: false,
+					name: 'SLES12_x64',
+					description: 'Build and Test on SLES12_x64?'
+					],
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: true,
+					name: 'WIN8R2_SP1_x64',
+					description: 'Build and Test on WIN8R2_SP1_x64?'
+					],
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: true,
+					name: 'WIN12R2_SP1_x64',
+					description: 'Build and Test on WIN12R2_SP1_x64?'
+					],
+					[
+					$class: 'ChoiceParameterDefinition', choices: '665\n664\n70', 
+					name: 'ESA_VERSION',
+					description: 'Select Esa Version'
+					],
+					[ 
+					$class: 'BooleanParameterDefinition',
+					defaultValue: true,
+					name: 'EXECUTE_FUNCTIONAL_TESTS',
+					description: 'Execute Functional Tests?'
+					],
+					[
+					$class: 'BooleanParameterDefinition',
+					defaultValue: true,
+					name: 'Automatic_Nightly_Weekend_Scenarios',
+					description: '''
+					Tick this option if default automatic tests are te be executed i.e
+					Linux :
+					Mon-Thurs -> Smoke_Suit and RCWD tests will be run
+					Friday -> All scenarios will be run .
+					Windows :
+					Mon-Thurs -> RCWD,TEST_FE
+					Fri -> AC_Full_Certification
+					'''
+					]
+				]
+			}
+		} catch(err){
+			params = ['RHEL5_x64': true, 'RHEL6.3_x64': true, 'RHEL6.8_x64': true, 'RHEL7.1_x64': true, 'RHEL7.2_x64': true, 'RHEL7.3_x64': false, 'SLES11_x32': false, 'SLES11_x64': false, 'SLES12_x64': false, 'WIN8R2_SP1_x64':true, 'WIN12R2_SP1_x64': true, 'Automatic_Nightly_Weekend_Scenarios': true, 'EXECUTE_FUNCTIONAL_TESTS': true, 'ESA_VERSION': '665']
+		}
+	}
+		
+			// Selecting which ESA catalog to choose to create ESA
+			if (params.ESA_VERSION == '664'){
+				ESA_CATALOG = 'Automated_ESA_6.6.4'
+			} else if (params.ESA_VERSION == '665'){
+				ESA_CATALOG = 'Automated_ESA_6.6.5'
+			} else if (params.ESA_VERSION == '70'){
+				ESA_CATALOG = 'Automated_ESA_7.0'
+			}
 
-// Selecting which ESA catalog to choose to create ESA
-if (params.ESA_VERSION == '664'){
-	ESA_CATALOG = 'Automated_ESA_6.6.4'
-} else if (params.ESA_VERSION == '665'){
-	ESA_CATALOG = 'Automated_ESA_6.6.5'
-} else if (params.ESA_VERSION == '70'){
-	ESA_CATALOG = 'Automated_ESA_7.0'
+	
+			if(params.RHEL5_x64) {
+				labels.add('BA_FP_RHEL5_x64')
+				testlabels['BA_FP_RHEL5_x64'] = 'vApp_FP_RHEL5_x64' }
+				
+			if(params.'RHEL6.3_x64') {
+				labels.add('BA_FP_RHEL6.3_x64')
+				testlabels['BA_FP_RHEL6.3_x64'] = 'vApp_FP_RHEL6.3_x64'  }
+				
+			if(params.'RHEL6.8_x64') {
+				labels.add('BA_FP_RHEL6.8_x64')
+				testlabels['BA_FP_RHEL6.8_x64'] = 'vApp_FP_RHEL6.8_x64'
+				}
+			if(params.'RHEL7.1_x64') {
+				labels.add('BA_FP_RHEL7.1_x64')
+				testlabels['BA_FP_RHEL7.1_x64'] = 'vApp_FP_RHEL7.1_x64' 
 }
+			if(params.'RHEL7.2_x64') {
+				labels.add('BA_FP_RHEL7.2_x64')
+				testlabels['BA_FP_RHEL7.2_x64'] = 'vApp_FP_RHEL7.2_x64' 
+}
+			if(params.'RHEL7.3_x64') {
+				labels.add('BA_FP_RHEL7.3_x64')
+				testlabels['BA_FP_RHEL7.3_x64'] = 'vApp_FP_RHEL7.3_x64' 
+}
+			if(params.SLES11_x32) {
+				labels.add('BA_FP_SLES11SP1_x32_Linux-2.6-kernel')
+				testlabels['BA_FP_SLES11SP1_x32_Linux-2.6-kernel'] = 'vApp_FP_SLES11_x32' 
+}
+			if(params.SLES11_x64) {
+				labels.add('BA_FP_SLES11SP1_x64_Linux2.6-kernel')
+				testlabels['BA_FP_SLES11SP1_x64_Linux2.6-kernel'] = 'vApp_FP_SLES11_x64' 
+}
+			if(params.SLES12_x64) {
+				labels.add('BA_FP_SLES12-SP1_x64')
+				testlabels['BA_FP_SLES12-SP1_x64'] = 'vApp_FP_SLES12_x64' 
+}
+			if(params.WIN8R2_SP1_x64) {
+				labels.add('BA_FP_WIN8R2_SP1_x64')
+				testlabels['BA_FP_WIN8R2_SP1_x64'] = 'vApp_FP_Windows2008R2SP1_x64' 
+}
+			if(params.WIN12R2_SP1_x64) {
+				labels.add('BA_FP_WIN12R2_SP1_x64')
+				testlabels['BA_FP_WIN12R2_SP1_x64'] = 'vApp_FP_Windows2012R2_x64' 
+}
+			
+			echo 'Build will be performed on: ' + labels.join(', ')
+			echo "Tests will be performed on: ${testlabels}"
+			echo "ESA used will be : $ESA_CATALOG"
 
 node('AutoProvision') {
-	try {
-			HTMLLINK['BA_FP_RHEL5_x64'] = 'Not Run'
-			Build_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
-			AutoProvision_AQA_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
-			Install_AQA_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
-			EFT_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
-			Deprovision_AQA_Stage['BA_FP_RHEL5_x64'] = 'Not Run'
 			HTMLLINK['BA_FP_RHEL6.3_x64'] = 'Not Run'   
 			Build_Stage['BA_FP_RHEL6.3_x64'] = 'Not Run'
 			AutoProvision_AQA_Stage['BA_FP_RHEL6.3_x64'] = 'Not Run'
@@ -128,56 +277,7 @@ node('AutoProvision') {
 			Install_AQA_Stage['BA_FP_WIN12R2_SP1_x64'] = 'Not Run'
 			EFT_Stage['BA_FP_WIN12R2_SP1_x64'] = 'Not Run'
 			Deprovision_AQA_Stage['BA_FP_WIN12R2_SP1_x64'] = 'Not Run'
-			
-			if(params.'RHEL5_x64') {
-				labels.add('BA_FP_RHEL5_x64')
-				testlabels['BA_FP_RHEL5_x64'] = 'vApp_FP_RHEL5_x64' }
-			if(params.'RHEL6.3_x64') {
-				labels.add('BA_FP_RHEL6.3_x64')
-				testlabels['BA_FP_RHEL6.3_x64'] = 'vApp_FP_RHEL6.3_x64'  
-}
-			if(params.'RHEL6.8_x64') {
-				labels.add('BA_FP_RHEL6.8_x64')
-				testlabels['BA_FP_RHEL6.8_x64'] = 'vApp_FP_RHEL6.8_x64'
-				}
-			if(params.'RHEL7.1_x64') {
-				labels.add('BA_FP_RHEL7.1_x64')
-				testlabels['BA_FP_RHEL7.1_x64'] = 'vApp_FP_RHEL7.1_x64' 
-}
-			if(params.'RHEL7.2_x64') {
-				labels.add('BA_FP_RHEL7.2_x64')
-				testlabels['BA_FP_RHEL7.2_x64'] = 'vApp_FP_RHEL7.2_x64' 
-}
-			if(params.'RHEL7.3_x64') {
-				labels.add('BA_FP_RHEL7.3_x64')
-				testlabels['BA_FP_RHEL7.3_x64'] = 'vApp_FP_RHEL7.3_x64' 
-}
-			if(params.'SLES11_x32') {
-				labels.add('BA_FP_SLES11SP1_x32_Linux-2.6-kernel')
-				testlabels['BA_FP_SLES11SP1_x32_Linux-2.6-kernel'] = 'vApp_FP_SLES11_x32' 
-}
-			if(params.'SLES11_x64') {
-				labels.add('BA_FP_SLES11SP1_x64_Linux2.6-kernel')
-				testlabels['BA_FP_SLES11SP1_x64_Linux2.6-kernel'] = 'vApp_FP_SLES11_x64' 
-}
-			if(params.'SLES12_x64') {
-				labels.add('BA_FP_SLES12-SP1_x64')
-				testlabels['BA_FP_SLES12-SP1_x64'] = 'vApp_FP_SLES12_x64' 
-}
-			if(params.'WIN8R2_SP1_x64') {
-				labels.add('BA_FP_WIN8R2_SP1_x64')
-				testlabels['BA_FP_WIN8R2_SP1_x64'] = 'vApp_FP_Windows2008R2SP1_x64' 
-}
-			if(params.'WIN12R2_SP1_x64') {
-				labels.add('BA_FP_WIN12R2_SP1_x64')
-				testlabels['BA_FP_WIN12R2_SP1_x64'] = 'vApp_FP_Windows2012R2_x64' 
-}
-			
-			echo 'Build will be performed on: ' + labels.join(', ')
-			echo "Tests will be performed on: ${testlabels}"
-
-	cleanWs()
-
+	try {			
 		stage('Build') {
 		  cleanWs() 
 		  try {
@@ -189,7 +289,7 @@ node('AutoProvision') {
 						try { 
 							echo "Build Checkout"
 							echo "Checking out FileProtector repo"
-							checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.4/']], workspaceUpdater: [$class: 'UpdateUpdater']]
+							checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.4@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
 							  echo "Cleaning build directory"
 							  dir('build') {
 							  deleteDir()
@@ -272,7 +372,127 @@ node('AutoProvision') {
 							}
 					
 							if( isUnix() ) {		
-								withEnv(["label=$label"]) {
+								withEnv(["label=$label","WORKSPACE=$WORKSPACE"]) {					
+									if ( label == 'BA_FP_SLES11SP1_x32_Linux-2.6-kernel' ) {
+										dir('build') {
+											sh '''
+											mkdir -p /root/FPInstaller
+											rm -rf /root/FPInstaller/*
+											mkdir -p /root/FPInstaller/2.6_files
+											mkdir -p /root/FPInstaller/3.x_files
+											cmake -i -G "Unix Makefiles" -DBUILD_64BIT=OFF ../
+											make
+											if [[ $? -ne 0 ]]; then
+												echo "make failed on sles_x32 2.6 kernel. Marking this build as failed"
+												exit 1
+											fi
+											make deploy
+											if [[ $? -ne 0 ]]; then
+												echo "make deploy failed on sles_x32 2.6 kernel. Marking this build as failed"
+												exit 1
+											fi
+											cd install
+											#cp *.tgz /root/FPInstaller
+											cd ../
+											cp bin/dfp_install_repack /root/FPInstaller
+											cp install/* /root/FPInstaller/2.6_files
+											'''
+										}
+										node('BA_FP_SLES11SP2_x32_Linux3.x-kernel') {
+											cleanWs()
+											echo "Checking out FileProtector repo on BA_FP_SLES11SP2_x32_Linux3.x-kernel" 
+											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.4@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
+											echo "Cleaning build directory"
+											dir('build') {
+												sh '''    
+												cmake -i -G "Unix Makefiles" -DBUILD_64BIT=OFF ../
+												make
+												if [[ $? -ne 0 ]]; then
+													echo "make failed on sles_x32 3.x kernel. Marking this build as failed"
+													exit 1
+												fi
+												make deploy
+												if [[ $? -ne 0 ]]; then
+													echo "make deploy failed on sles_x32 3.x kernel. Marking this build as failed"
+													exit 1
+												fi
+												cd install
+												#scp *.tgz root@10.10.51.106:/root/FPInstaller
+												scp * root@10.10.51.106:/root/FPInstaller/3.x_files
+												'''				
+											}
+										}
+										dir('/root/FPInstaller') {
+										sh '''
+										./dfp_install_repack 2.6_files 3.x_files
+										rm -rf $WORKSPACE/build/install/*.tgz
+										cd install*
+										cp -rf *.tgz $WORKSPACE/build/install
+										'''
+										}
+									}
+						
+									if ( label == 'BA_FP_SLES11SP1_x64_Linux2.6-kernel' ) {
+										dir('build') {
+											sh '''
+											mkdir -p /root/FPInstaller
+											rm -rf /root/FPInstaller/*
+											mkdir -p /root/FPInstaller/2.6_files
+											mkdir -p /root/FPInstaller/3.x_files
+											cmake -i -G "Unix Makefiles" ../
+											make
+											if [[ $? -ne 0 ]]; then
+												echo "make failed on sles_x64 2.6 kernel. Marking this build as failed"
+												exit 1
+											fi
+											make deploy
+											if [[ $? -ne 0 ]]; then
+												echo "make deploy failed on sles_x64 2.6 kernel. Marking this build as failed"
+												exit 1
+											fi
+											cd install
+											#cp *.tgz /root/FPInstaller
+											cd ../
+											cp bin/dfp_install_repack /root/FPInstaller
+											cp install/* /root/FPInstaller/2.6_files
+											'''
+										}
+										node('BA_FP_SLES11SP2_x64_Linux3.x') {
+											cleanWs()
+											echo "Checking out FileProtector repo on BA_FP_SLES11SP2_x64_Linux3.x" 
+											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/RnD/FileProtector/FPNG/releases/FP6.6.4@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
+											echo "Cleaning build directory"
+											dir('build') {
+												sh '''    
+												cmake -i -G "Unix Makefiles" ../
+												make
+												if [[ $? -ne 0 ]]; then
+													echo "make failed on sles_x64 3.x kernel. Marking this build as failed"
+													exit 1
+												fi
+												make deploy
+												if [[ $? -ne 0 ]]; then
+													echo "make deploy failed on sles_x64 3.x kernel. Marking this build as failed"
+													exit 1
+												fi
+												cd install
+												#scp *.tgz root@10.10.50.116:/root/FPInstaller
+												scp * root@10.10.50.116:/root/FPInstaller/3.x_files
+												'''				
+											}
+										}
+										dir('/root/FPInstaller') {
+										sh '''
+										./dfp_install_repack 2.6_files 3.x_files
+										rm -rf $WORKSPACE/build/install/*.tgz
+										cd install*
+										cp -rf *.tgz $WORKSPACE/build/install
+										'''
+										}
+									}								
+								}
+													
+								if ( label != 'BA_FP_SLES11SP1_x32_Linux-2.6-kernel' && label != 'BA_FP_SLES11SP1_x64_Linux2.6-kernel' ) {
 									dir('build') {
 										sh '''
 										if [[ `echo $label | grep x32`  ]]; then
@@ -553,7 +773,7 @@ node('AutoProvision') {
 									if ( isUnix() ) {
 										// Code to install AQA on Linux nodes 
 										print "Checking out AQA trunk"
-										checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk']], workspaceUpdater: [$class: 'UpdateUpdater']]
+										checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
 										withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_user', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
     										sh '''
     										echo yes | svn up --username $JENKINS_USERNAME --password $JENKINS_PASSWORD
@@ -596,7 +816,7 @@ node('AutoProvision') {
 										cleanWs()
 										withEnv(["WORKSPACE=$WORKSPACE"]) {
 											print "Checking out AQA trunk"
-											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk']], workspaceUpdater: [$class: 'UpdateUpdater']]
+											checkout changelog: false, poll: false, scm: [$class: 'SubversionSCM', additionalCredentials: [[credentialsId: 'jenkins_user', realm: '<http://svn.protegrity.com:80> VisualSVN Server ']], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[credentialsId: 'jenkins_user', depthOption: 'infinity', ignoreExternalsOption: false, local: '.', remote: 'http://svn.protegrity.com/svn/QA/TestAutomation/trunk@HEAD']], workspaceUpdater: [$class: 'UpdateUpdater']]
 											bat '''
 											java -version
 											C:\\Users\\jenkins\\apache-maven-3.0.4\\bin\\mvn clean install -Prelease-fileProtector
@@ -754,8 +974,11 @@ node('AutoProvision') {
 															service httpd stop
 															apachectl stop
 															service firewalld stop
+															rm -rf /home/jenkins/AQA_SVN/runner/log/*
+															rm -rf /var/www/html/*
+															mkdir -p /home/jenkins/AQA_SVN/runner/log/current
 															ln -s /home/jenkins/AQA_SVN/runnner/log /var/www/html/
-															chmod -R 755 /var/www/html
+															#chmod -R 755 /var/www/html
 															#Start Apache services
 															service httpd start
 															apachectl start
@@ -807,7 +1030,8 @@ node('AutoProvision') {
 																	set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/AC_FullCertification
 																) else (
 																	echo "Its a weekday . Executing only RCWD scenario"
-																	set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/Test_FE,/scenarios/6.6.2/FileEncryption_RCWD
+																	REM set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/Test_FE,/scenarios/6.6.2/FileEncryption_RCWD
+																	set FUNCTIONAL_TEST_SCENARIOS=/scenarios/6.6.2/Test_FE
 																)
 																echo "Scenarios executed will be : !FUNCTIONAL_TEST_SCENARIOS!"
 															)
