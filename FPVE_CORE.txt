@@ -32,7 +32,6 @@ def loadProperties_Linux(nodeName,PropertiesFilePath,PropertiesFile) {
 		stage('Build Options') {
 			 try {
 				timeout(time: 60, unit: 'SECONDS') {
-					stage 'Build Options'
 					// Define an input step and capture the outcome from it.
 					params = input id: 'Run-test-suites',
 					message: 'Workflow Configuration',
@@ -113,61 +112,31 @@ if (params.Sles11 || params.Sles12) {
 if (params.Rhel6) {
     labels.add('Rhel6') // can be used for autoprovision aqa machines
     catalog['Rhel6'] = 'vApp_FP_RHEL6.3_x64'
-	AutoProvision_AQA_Stage['Rhel6'] = 'Not Run'
-	Install_AQA_Stage['Rhel6'] = 'Not Run'
-	EFT_Stage['Rhel6'] = 'Not Run'
-	Deprovision_AQA_Stage['Rhel6'] = 'Not Run'
-	HTMLLINK['Rhel6'] = 'Not Run'
 }
 
 if (params.Rhel7) {
     labels.add('Rhel7') // can be used for autoprovision aqa machines
     catalog['Rhel7'] = 'vApp_FP_RHEL7.1_x64'
-	AutoProvision_AQA_Stage['Rhel7'] = 'Not Run'
-	Install_AQA_Stage['Rhel7'] = 'Not Run'
-	EFT_Stage['Rhel7'] = 'Not Run'
-	Deprovision_AQA_Stage['Rhel7'] = 'Not Run'
-	HTMLLINK['Rhel7'] = 'Not Run'
 }
 
 if (params.Centos6) {
     labels.add('Centos6') // can be used for autoprovision aqa machines
     catalog['Centos6'] = 'vApp_FP_CENTOS6_x64'
-	AutoProvision_AQA_Stage['Centos6'] = 'Not Run'
-	Install_AQA_Stage['Centos6'] = 'Not Run'
-	EFT_Stage['Centos6'] = 'Not Run'
-	Deprovision_AQA_Stage['Centos6'] = 'Not Run'
-	HTMLLINK['Centos6'] = 'Not Run'
 }
 
 if (params.Centos7) {
     labels.add('Centos7') // can be used for autoprovision aqa machines
     catalog['Centos7'] = 'vApp_FP_CENTOS7_x64'
-	AutoProvision_AQA_Stage['Centos7'] = 'Not Run'
-	Install_AQA_Stage['Centos7'] = 'Not Run'
-	EFT_Stage['Centos7'] = 'Not Run'
-	Deprovision_AQA_Stage['Centos7'] = 'Not Run'
-	HTMLLINK['Centos7'] = 'Not Run'
 }
 
 if (params.Sles11) {
     labels.add('Sles11') // can be used for autoprovision aqa machines
     catalog['Sles11'] = 'vApp_FP_SLES11_x64'
-	AutoProvision_AQA_Stage['Sles11'] = 'Not Run'
-	Install_AQA_Stage['Sles11'] = 'Not Run'
-	EFT_Stage['Sles11'] = 'Not Run'
-	Deprovision_AQA_Stage['Sles11'] = 'Not Run'
-	HTMLLINK['Sles11'] = 'Not Run'
 }
 
 if (params.Sles12) {
     labels.add('Sles12') // can be used for autoprovision aqa machines
     catalog['Sles12'] = 'vApp_FP_SLES12_x64'
-	AutoProvision_AQA_Stage['Sles12'] = 'Not Run'
-	Install_AQA_Stage['Sles12'] = 'Not Run'
-	EFT_Stage['Sles12'] = 'Not Run'
-	Deprovision_AQA_Stage['Sles12'] = 'Not Run'
-	HTMLLINK['Sles12'] = 'Not Run'
 }
 
 // Selecting which ESA catalog to choose to create ESA
@@ -184,6 +153,43 @@ println "catalogs created will be of $catalog"
 println "Esa catalog used will be $ESA_CATALOG"
 
 node('BA_FP_RHEL6.8_x64') {
+
+	AutoProvision_AQA_Stage['Rhel6'] = 'Not Run'
+	Install_AQA_Stage['Rhel6'] = 'Not Run'
+	EFT_Stage['Rhel6'] = 'Not Run'
+	Deprovision_AQA_Stage['Rhel6'] = 'Not Run'
+	HTMLLINK['Rhel6'] = 'Not Run'
+	
+	AutoProvision_AQA_Stage['Rhel7'] = 'Not Run'
+	Install_AQA_Stage['Rhel7'] = 'Not Run'
+	EFT_Stage['Rhel7'] = 'Not Run'
+	Deprovision_AQA_Stage['Rhel7'] = 'Not Run'
+	HTMLLINK['Rhel7'] = 'Not Run'
+	
+	AutoProvision_AQA_Stage['Centos6'] = 'Not Run'
+	Install_AQA_Stage['Centos6'] = 'Not Run'
+	EFT_Stage['Centos6'] = 'Not Run'
+	Deprovision_AQA_Stage['Centos6'] = 'Not Run'
+	HTMLLINK['Centos6'] = 'Not Run'
+	
+	AutoProvision_AQA_Stage['Centos7'] = 'Not Run'
+	Install_AQA_Stage['Centos7'] = 'Not Run'
+	EFT_Stage['Centos7'] = 'Not Run'
+	Deprovision_AQA_Stage['Centos7'] = 'Not Run'
+	HTMLLINK['Centos7'] = 'Not Run'
+	
+	AutoProvision_AQA_Stage['Sles12'] = 'Not Run'
+	Install_AQA_Stage['Sles12'] = 'Not Run'
+	EFT_Stage['Sles12'] = 'Not Run'
+	Deprovision_AQA_Stage['Sles12'] = 'Not Run'
+	HTMLLINK['Sles12'] = 'Not Run'
+	
+	AutoProvision_AQA_Stage['Sles11'] = 'Not Run'
+	Install_AQA_Stage['Sles11'] = 'Not Run'
+	EFT_Stage['Sles11'] = 'Not Run'
+	Deprovision_AQA_Stage['Sles11'] = 'Not Run'
+	HTMLLINK['Sles11'] = 'Not Run'
+	
 	try {
 		stage('Build') {
 				try {
@@ -691,4 +697,4 @@ node('BA_FP_RHEL6.8_x64') {
 		
 	}
     
-} // node('BA_FP_RHEL6.3_x64')
+} // node('BA_FP_RHEL6.8_x64')
